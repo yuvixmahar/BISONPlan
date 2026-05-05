@@ -38,6 +38,17 @@ function meetingDays(mt) {
   return days.filter(([k]) => Boolean(mt?.[k])).map(([, label]) => label);
 }
 
+function splitSectionInfo(rawText) {
+  const raw = (rawText || "").trim();
+  if (!raw) return { main: "", sectionInfo: "" };
+  const marker = /section information text\s*:/i;
+  const parts = raw.split(marker);
+  if (parts.length <= 1) return { main: raw, sectionInfo: "" };
+  const main = parts[0].trim().replace(/[.\s]+$/, "");
+  const sectionInfo = parts.slice(1).join(" ").trim();
+  return { main, sectionInfo };
+}
+
 export default function QuickViewDrawer({ open, course, termCode, onClose }) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
@@ -60,6 +71,17 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
   );
 
   const meetings = useMemo(() => meetingEntries(course), [course]);
+  const prereqSplit = useMemo(
+    () => splitSectionInfo(detailData?.prerequisites_raw || ""),
+    [detailData]
+  );
+  const coreqSplit = useMemo(
+    () => splitSectionInfo(detailData?.corequisites_raw || ""),
+    [detailData]
+  );
+  const sectionInfoText = useMemo(() => {
+    return prereqSplit.sectionInfo || coreqSplit.sectionInfo || "";
+  }, [prereqSplit, coreqSplit]);
 
   useEffect(() => {
     if (!open || !course || !termCode) return;
@@ -159,24 +181,34 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
             </div>
           </section>
 
-          {(detailData?.prerequisites_raw || detailData?.corequisites_raw) ? (
+          {(prereqSplit.main || coreqSplit.main || sectionInfoText) ? (
             <section>
               <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
                 Requisites
               </div>
-              {detailData?.prerequisites_raw ? (
+              {prereqSplit.main ? (
                 <div className="mb-3">
                   <div className="text-xs font-semibold text-slate-600 mb-1">Prerequisites</div>
                   <div className="text-sm text-slate-700 leading-relaxed">
-                    Prerequisites: {detailData.prerequisites_raw}
+                    {prereqSplit.main}
                   </div>
                 </div>
               ) : null}
-              {detailData?.corequisites_raw ? (
+              {coreqSplit.main ? (
                 <div>
                   <div className="text-xs font-semibold text-slate-600 mb-1">Corequisites</div>
                   <div className="text-sm text-slate-700 leading-relaxed">
-                    Pre- or corequisite: {detailData.corequisites_raw}
+                    {coreqSplit.main}
+                  </div>
+                </div>
+              ) : null}
+              {sectionInfoText ? (
+                <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs font-semibold text-slate-700 mb-1">
+                    Section Information
+                  </div>
+                  <div className="text-sm text-slate-700 leading-relaxed">
+                    {sectionInfoText}
                   </div>
                 </div>
               ) : null}

@@ -13,7 +13,14 @@ export default function useCourses(subject, term) {
   }, [subject, term]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setData([]);
+      setLoading(false);
+      setError(null);
+      setIsStale(false);
+      setCachedAt(null);
+      return;
+    }
 
     let cancelled = false;
     async function run() {
