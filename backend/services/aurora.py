@@ -141,14 +141,16 @@ async def fetch_subjects(client: httpx.AsyncClient, term: str) -> list[str]:
     return uniq
 
 
-async def fetch_terms(client: httpx.AsyncClient) -> list[dict]:
+async def fetch_terms(
+    client: httpx.AsyncClient, offset: int = 1, max_items: int = 10, search_term: str = ""
+) -> list[dict]:
     """
-    GET /classSearch/getTerms with a large max to get all available terms.
+    GET /classSearch/getTerms with pagination.
     """
 
     r = await client.get(
         f"{BASE_URL}/classSearch/getTerms",
-        params={"searchTerm": "", "offset": 1, "max": 5000},
+        params={"searchTerm": search_term, "offset": offset, "max": max_items},
     )
     r.raise_for_status()
 
