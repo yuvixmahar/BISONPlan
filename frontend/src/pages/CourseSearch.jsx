@@ -60,9 +60,6 @@ export default function CourseSearch() {
         setTerms(pageItems);
         setTermsHasMore(Boolean(json?.data?.has_more));
         setTermsOffset(json?.data?.next_offset || 2);
-        if (pageItems.length > 0) {
-          setTermCode(pageItems[0].code);
-        }
       } finally {
         setTermsLoading(false);
       }
@@ -71,7 +68,15 @@ export default function CourseSearch() {
   }, []);
 
   useEffect(() => {
-    if (!termCode) return;
+    if (!termCode) {
+      setSubjects([]);
+      setSubject("");
+      setSubjectInput("");
+      setSubjectMenuOpen(false);
+      setSubjectOffset(1);
+      setSubjectHasMore(false);
+      return;
+    }
     async function runInitialSubjects() {
       setSubjectLoading(true);
       const nextSession = `bp-${termCode}-${Date.now()}`;
@@ -82,12 +87,9 @@ export default function CourseSearch() {
         setSubjects(items);
         setSubjectHasMore(Boolean(json?.data?.has_more));
         setSubjectOffset(json?.data?.next_offset || 2);
-        const first = items[0]?.code || "";
-        setSubject(first);
-        const firstLabel = items[0]
-          ? `${items[0].code} - ${items[0].description}`
-          : "";
-        setSubjectInput(firstLabel);
+        // Do not auto-select a department on refresh/term change.
+        setSubject("");
+        setSubjectInput("");
       } finally {
         setSubjectLoading(false);
       }

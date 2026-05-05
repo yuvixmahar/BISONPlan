@@ -90,8 +90,10 @@ export default function CourseCard({ course, termCode, onQuickView }) {
   const seatsAvailable = pickFirst(course, ["seatsAvailable", "seats_avail", "seats"], null);
   const waitlistCount = pickFirst(course, ["waitlistCount", "waitlist", "waitCount", "waitlistCountText"], null);
 
-  const prerequisites = detailData?.prerequisites ?? course.prerequisites ?? [];
-  const corequisites = detailData?.corequisites ?? course.corequisites ?? [];
+  const prerequisitesRaw =
+    detailData?.prerequisites_raw ?? course.prerequisites_raw ?? "";
+  const corequisitesRaw =
+    detailData?.corequisites_raw ?? course.corequisites_raw ?? "";
   const displayDescription =
     detailData?.description ?? course.description ?? "";
 
@@ -135,8 +137,11 @@ export default function CourseCard({ course, termCode, onQuickView }) {
               </div>
               <div className="text-xs text-slate-500 mt-1">
                 {section ? `Section ${section}` : "Section —"}
-                {credits ? ` • ${credits} credits` : ""}
-                {meeting ? ` • ${meeting}` : ""}
+              </div>
+              <div className="text-xs text-slate-500 mt-1">
+                {credits ? `${credits} credits` : ""}
+                {credits && meeting ? " • " : ""}
+                {meeting ? meeting : ""}
               </div>
               {instructor ? (
                 <div className="text-xs text-slate-500 mt-1">
@@ -192,31 +197,33 @@ export default function CourseCard({ course, termCode, onQuickView }) {
               : "No description available."}
           </div>
 
-          {(prerequisites.length > 0 || corequisites.length > 0 || course.note) ? (
+          {(prerequisitesRaw || corequisitesRaw || course.note) ? (
             <div className="mt-3">
-              {prerequisites.length > 0 ? (
+              {prerequisitesRaw ? (
                 <div className="text-xs text-slate-600 font-semibold mb-1">Prerequisites</div>
               ) : null}
-              {prerequisites.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {prerequisites.map((p) => (
-                    <span key={p} className="text-xs px-2 py-1 rounded bg-slate-50 border border-slate-200">
-                      {p}
-                    </span>
-                  ))}
+              {prerequisitesRaw ? (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                  <div className="text-xs font-bold text-amber-900 mb-1">
+                    Prerequisites
+                  </div>
+                  <div className="text-sm text-amber-950 leading-relaxed">
+                    {prerequisitesRaw}
+                  </div>
                 </div>
               ) : null}
 
-              {corequisites.length > 0 ? (
+              {corequisitesRaw ? (
                 <div className="text-xs text-slate-600 font-semibold mb-1 mt-3">Corequisites</div>
               ) : null}
-              {corequisites.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {corequisites.map((p) => (
-                    <span key={p} className="text-xs px-2 py-1 rounded bg-slate-50 border border-slate-200">
-                      {p}
-                    </span>
-                  ))}
+              {corequisitesRaw ? (
+                <div className="rounded-md border border-blue-200 bg-blue-50 p-3 mt-2">
+                  <div className="text-xs font-bold text-blue-900 mb-1">
+                    Pre- or Corequisite
+                  </div>
+                  <div className="text-sm text-blue-950 leading-relaxed">
+                    {corequisitesRaw}
+                  </div>
                 </div>
               ) : null}
 
