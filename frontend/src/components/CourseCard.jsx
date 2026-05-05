@@ -83,7 +83,12 @@ export default function CourseCard({ course, termCode, onQuickView }) {
     [course]
   );
   const section = useMemo(
-    () => pickFirst(course, ["section", "classSection", "enrollmentSection"], ""),
+    () =>
+      pickFirst(
+        course,
+        ["section", "classSection", "enrollmentSection", "sequenceNumber"],
+        ""
+      ),
     [course]
   );
   const instructor = useMemo(
@@ -100,6 +105,8 @@ export default function CourseCard({ course, termCode, onQuickView }) {
 
   const seatsAvailable = pickFirst(course, ["seatsAvailable", "seats_avail", "seats"], null);
   const waitlistCount = pickFirst(course, ["waitlistCount", "waitlist", "waitCount", "waitlistCountText"], null);
+  const seatsCapacity = pickFirst(course, ["maximumEnrollment", "seatCapacity", "capacity"], null);
+  const waitlistCapacity = pickFirst(course, ["waitCapacity", "waitlistCapacity"], null);
 
   const prerequisitesRaw =
     detailData?.prerequisites_raw ?? course.prerequisites_raw ?? "";
@@ -166,7 +173,11 @@ export default function CourseCard({ course, termCode, onQuickView }) {
                   {meetings.slice(0, 2).map((mt, idx) => {
                     const days = meetingDays(mt);
                     const time = `${toAmPm(mt.beginTime)}-${toAmPm(mt.endTime)}`.replace(/\s+/g, " ");
-                    const loc = mt.buildingDescription || mt.building || mt.room || "TBA";
+                    const building = mt.buildingDescription || mt.building || "";
+                    const room = mt.room || "";
+                    const loc = building && room
+                      ? `${building} ${room}`
+                      : building || room || "TBA";
                     return (
                       <span
                         key={`${idx}-${mt.beginTime}-${mt.endTime}`}
@@ -182,8 +193,13 @@ export default function CourseCard({ course, termCode, onQuickView }) {
           </div>
         </div>
 
-        <div className="shrink-0">
-          <SeatBadge seatsAvailable={seatsAvailable} waitlistCount={waitlistCount} />
+        <div className="shrink-0 w-40">
+          <SeatBadge
+            seatsAvailable={seatsAvailable}
+            waitlistCount={waitlistCount}
+            seatsCapacity={seatsCapacity}
+            waitlistCapacity={waitlistCapacity}
+          />
           <button
             type="button"
             onClick={(e) => {

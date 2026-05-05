@@ -22,6 +22,42 @@ function courseCode(course) {
   return course.courseCode || "";
 }
 
+function getMeetingTimes(course) {
+  const mf = Array.isArray(course?.meetingsFaculty) ? course.meetingsFaculty : [];
+  return mf.map((m) => m?.meetingTime).filter(Boolean);
+}
+
+function hasDay(course, dayCode) {
+  if (!dayCode || dayCode === "any") return true;
+  const dayMap = {
+    M: "monday",
+    T: "tuesday",
+    W: "wednesday",
+    R: "thursday",
+    F: "friday",
+    S: "saturday",
+    U: "sunday",
+  };
+  const key = dayMap[dayCode];
+  if (!key) return true;
+  return getMeetingTimes(course).some((mt) => Boolean(mt?.[key]));
+}
+
+function inTimeWindow(course, timeFilter) {
+  if (!timeFilter || timeFilter === "any") return true;
+  const beginTimes = getMeetingTimes(course)
+    .map((mt) => Number(mt?.beginTime ?? 0))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  if (!beginTimes.length) return false;
+
+  return beginTimes.some((t) => {
+    if (timeFilter === "morning") return t < 1200;
+    if (timeFilter === "afternoon") return t >= 1200 && t < 1700;
+    if (timeFilter === "evening") return t >= 1700;
+    return true;
+  });
+}
+
 export default function CourseSearch() {
   const [health, setHealth] = useState({ aurora_status: "up", latency_ms: null });
 
@@ -46,9 +82,15 @@ export default function CourseSearch() {
   const subjectListRef = useRef(null);
 
   const [query, setQuery] = useState("");
-  const [openOnly, setOpenOnly] = useState(true);
+  const [includeFullClasses, setIncludeFullClasses] = useState(true);
+  const [onlyWaitlisted, setOnlyWaitlisted] = useState(false);
   const [creditHour, setCreditHour] = useState("");
   const [scheduleType, setScheduleType] = useState("any");
+  const [campus, setCampus] = useState("any");
+  const [deliveryMode, setDeliveryMode] = useState("any");
+  const [dayFilter, setDayFilter] = useState("any");
+  const [timeFilter, setTimeFilter] = useState("any");
+  const [instructorFilter, setInstructorFilter] = useState("");
   const [quickViewCourse, setQuickViewCourse] = useState(null);
 
   useEffect(() => {
@@ -268,17 +310,41 @@ export default function CourseSearch() {
     return terms.find((t) => t.code === termCode)?.description || "Select a term";
   }, [terms, termCode]);
   const hasCourseSelection = Boolean(termCode && subject);
+  const campusOptions = useMemo(() => {
+    const set = new Set(
+      (courses || []).map((c) => c.campusDescription).filter(Boolean)
+    );
+    return Array.from(set).sort();
+  }, [courses]);
+  const deliveryOptions = useMemo(() => {
+    const set = new Set(
+      (courses || [])
+        .map(
+          (c) =>
+            c.instructionalMethodDescription ||
+            c.scheduleTypeDescription ||
+            c.instructionalMethod
+        )
+        .filter(Boolean)
+    );
+    return Array.from(set).sort();
+  }, [courses]);
 
   const filteredCourses = useMemo(() => {
     const q = query.trim().toLowerCase();
     const creditNum = creditHour ? Number(creditHour) : null;
+    const instructorQ = instructorFilter.trim().toLowerCase();
 
     return (courses || [])
       .filter((c) => {
         if (!c) return false;
-        if (openOnly) {
+        if (!includeFullClasses) {
           const seats = Number(c.seatsAvailable ?? 0);
           if (seats <= 0) return false;
+        }
+        if (onlyWaitlisted) {
+          const wait = Number(c.waitCount ?? c.waitlistCount ?? 0);
+          if (wait <= 0) return false;
         }
         if (creditNum != null) {
           const credits = Number(c.credits ?? c.creditHours ?? 0);
@@ -290,6 +356,28 @@ export default function CourseSearch() {
           if (scheduleType === "days" && !hasMeeting) return false;
           if (scheduleType === "none" && hasMeeting) return false;
         }
+        if (campus !== "any") {
+          if ((c.campusDescription || "") !== campus) return false;
+        }
+        if (deliveryMode !== "any") {
+          const mode =
+            c.instructionalMethodDescription ||
+            c.scheduleTypeDescription ||
+            c.instructionalMethod ||
+            "";
+          if (mode !== deliveryMode) return false;
+        }
+        if (!hasDay(c, dayFilter)) return false;
+        if (!inTimeWindow(c, timeFilter)) return false;
+        if (instructorQ) {
+          const instructor = (
+            c.instructorName ||
+            c.instructor ||
+            c.instructorNames ||
+            ""
+          ).toLowerCase();
+          if (!instructor.includes(instructorQ)) return false;
+        }
         if (q) {
           const hay = `${courseCode(c)} ${c.title || c.courseTitle || ""}`.toLowerCase();
           if (!hay.includes(q)) return false;
@@ -297,13 +385,37 @@ export default function CourseSearch() {
         return true;
       })
       .slice(0, 2000);
-  }, [courses, query, openOnly, creditHour, scheduleType]);
+  }, [
+    courses,
+    query,
+    includeFullClasses,
+    onlyWaitlisted,
+    creditHour,
+    scheduleType,
+    campus,
+    deliveryMode,
+    dayFilter,
+    timeFilter,
+    instructorFilter,
+  ]);
+
+  function clearFilters() {
+    setIncludeFullClasses(true);
+    setOnlyWaitlisted(false);
+    setCreditHour("");
+    setScheduleType("any");
+    setCampus("any");
+    setDeliveryMode("any");
+    setDayFilter("any");
+    setTimeFilter("any");
+    setInstructorFilter("");
+  }
 
   return (
     <div className="min-h-screen">
       <StaleBanner isStale={isStale} cachedAtMinutesAgo={cachedAtMinutesAgo} />
 
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="font-heading text-3xl">Course Search</div>
@@ -431,20 +543,31 @@ export default function CourseSearch() {
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <div className="lg:col-span-2">
-            <SearchBar value={query} onChange={setQuery} />
-          </div>
-          <div>
-            <FilterPanel
-              openOnly={openOnly}
-              setOpenOnly={setOpenOnly}
-              creditHour={creditHour}
-              setCreditHour={setCreditHour}
-              scheduleType={scheduleType}
-              setScheduleType={setScheduleType}
-            />
-          </div>
+        <div className="mt-5 space-y-3">
+          <SearchBar value={query} onChange={setQuery} />
+          <FilterPanel
+            includeFullClasses={includeFullClasses}
+            setIncludeFullClasses={setIncludeFullClasses}
+            onlyWaitlisted={onlyWaitlisted}
+            setOnlyWaitlisted={setOnlyWaitlisted}
+            creditHour={creditHour}
+            setCreditHour={setCreditHour}
+            scheduleType={scheduleType}
+            setScheduleType={setScheduleType}
+            campus={campus}
+            setCampus={setCampus}
+            campusOptions={campusOptions}
+            deliveryMode={deliveryMode}
+            setDeliveryMode={setDeliveryMode}
+            deliveryOptions={deliveryOptions}
+            dayFilter={dayFilter}
+            setDayFilter={setDayFilter}
+            timeFilter={timeFilter}
+            setTimeFilter={setTimeFilter}
+            instructorFilter={instructorFilter}
+            setInstructorFilter={setInstructorFilter}
+            onClearFilters={clearFilters}
+          />
         </div>
               
         <div className="mt-6">
