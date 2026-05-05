@@ -22,3 +22,10 @@ export async function getHealth() {
   return res.data;
 }
 
+export async function getTerms(offset = 1, max = 10, searchTerm = "") {
+  const res = await client.get("/terms", {
+    params: { offset, max, searchTerm },
+  });
+  return res.data;
+}
+

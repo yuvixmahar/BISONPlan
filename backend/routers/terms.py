@@ -1,10 +1,7 @@
 import httpx
-import re
+from fastapi import APIRouter, Query
 
-from fastapi import APIRouter, HTTPException
-
-from ..config import TERMS
-from ..services.aurora import fetch_terms, init_term_session, make_client
+from ..services.aurora import fetch_terms, make_client
 
 router = APIRouter()
 
@@ -13,41 +10,62 @@ def _wrap(success: bool, source: str, cached_at: int | None, data):
     return {"success": success, "source": source, "cached_at": cached_at, "data": data}
 
 
-def _slugify(s: str) -> str:
-    s = (s or "").strip().lower()
-    s = re.sub(r"[^a-z0-9]+", "_", s)
-    s = re.sub(r"_+", "_", s).strip("_")
-    return s
-
-
 @router.get("/terms")
-async def get_terms():
-    # Start with hardcoded terms.
-    merged: dict[str, str] = dict(TERMS)
-
+async def get_terms(
+    offset: int = Query(1, ge=1),
+    max: int = Query(10, ge=1, le=50),
+    searchTerm: str = Query("", alias="searchTerm"),
+):
     try:
         async with make_client() as client:
-            # init_term_session isn't strictly required for getTerms, but it's
-            # cheap and keeps Aurora session consistent.
-            await init_term_session(client, next(iter(TERMS.values())))
-            dynamic_terms = await fetch_terms(client)
+            page = await fetch_terms(
+                client,
+                offset=offset,
+                max_items=max,
+                search_term=searchTerm,
+            )
 
-        # Normalize various Aurora payload shapes into "slug -> termCode".
-        for item in dynamic_terms or []:
+        normalized: list[dict[str, str]] = []
+        for item in page or []:
             if not isinstance(item, dict):
                 continue
 
-            term_code = item.get("termCode") or item.get("code") or item.get("term") or None
-            label = item.get("description") or item.get("name") or item.get("label") or ""
+            term_code = item.get("termCode") or item.get("code") or item.get("term")
+            label = item.get("description") or item.get("name") or item.get("label")
             if not term_code:
                 continue
 
-            key = _slugify(label) or f"term_{term_code}"
-            if key not in merged:
-                merged[key] = str(term_code)
+            normalized.append(
+                {
+                    "code": str(term_code),
+                    "description": str(label or str(term_code)),
+                }
+            )
 
-        return _wrap(True, "live", None, merged)
+        has_more = len(normalized) >= max
+        return _wrap(
+            True,
+            "live",
+            None,
+            {
+                "items": normalized,
+                "offset": offset,
+                "max": max,
+                "has_more": has_more,
+                "next_offset": offset + 1 if has_more else None,
+            },
+        )
     except (httpx.HTTPStatusError, httpx.RequestError):
-        # If Aurora is down, still return hardcoded terms.
-        return _wrap(True, "stale", None, merged)
+        return _wrap(
+            True,
+            "stale",
+            None,
+            {
+                "items": [],
+                "offset": offset,
+                "max": max,
+                "has_more": False,
+                "next_offset": None,
+            },
+        )
 

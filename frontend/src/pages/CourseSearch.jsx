@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { getHealth } from "../api/client.js";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { getHealth, getSubjects, getTerms } from "../api/client.js";
 import useCourses from "../hooks/useCourses.js";
 import FilterPanel from "../components/FilterPanel.jsx";
 import SearchBar from "../components/SearchBar.jsx";
@@ -24,9 +24,13 @@ function courseCode(course) {
 export default function CourseSearch() {
   const [health, setHealth] = useState({ aurora_status: "up", latency_ms: null });
 
-  const [terms, setTerms] = useState({});
-  const [termKey, setTermKey] = useState("");
-  const termCode = terms[termKey] || "";
+  const [terms, setTerms] = useState([]);
+  const [termCode, setTermCode] = useState("");
+  const [termsOffset, setTermsOffset] = useState(1);
+  const [termsHasMore, setTermsHasMore] = useState(false);
+  const [termsLoading, setTermsLoading] = useState(false);
+  const [termMenuOpen, setTermMenuOpen] = useState(false);
+  const termMenuRef = useRef(null);
 
   const [subjects, setSubjects] = useState([]);
   const [subject, setSubject] = useState("");
@@ -37,25 +41,28 @@ export default function CourseSearch() {
   const [scheduleType, setScheduleType] = useState("any");
 
   useEffect(() => {
-    async function run() {
-      // Fetch terms (hardcoded + dynamic) from the backend.
-      // Reuse getHealth's axios instance for consistency.
-      const res = await fetch("http://localhost:8000/api/terms");
-      const json = await res.json();
-      if (json?.data) {
-        setTerms(json.data);
-        const firstKey = Object.keys(json.data)[0] || "";
-        setTermKey(firstKey);
+    async function runInitialTerms() {
+      setTermsLoading(true);
+      try {
+        const json = await getTerms(1, 10, "");
+        const pageItems = json?.data?.items || [];
+        setTerms(pageItems);
+        setTermsHasMore(Boolean(json?.data?.has_more));
+        setTermsOffset(json?.data?.next_offset || 2);
+        if (pageItems.length > 0) {
+          setTermCode(pageItems[0].code);
+        }
+      } finally {
+        setTermsLoading(false);
       }
     }
-    run();
+    runInitialTerms();
   }, []);
 
   useEffect(() => {
     if (!termCode) return;
     async function run() {
-      const res = await fetch(`http://localhost:8000/api/subjects?term=${encodeURIComponent(termCode)}`);
-      const json = await res.json();
+      const json = await getSubjects(termCode);
       setSubjects(json?.data || []);
       const first = (json?.data || [])[0]?.code || "";
       setSubject(first);
@@ -84,7 +91,53 @@ export default function CourseSearch() {
 
   const { data: courses, loading, error, isStale, cachedAt } = useCourses(subject, termCode);
 
+  async function loadMoreTerms() {
+    if (termsLoading || !termsHasMore) return;
+    setTermsLoading(true);
+    try {
+      const json = await getTerms(termsOffset, 10, "");
+      const pageItems = json?.data?.items || [];
+      setTerms((prev) => {
+        const seen = new Set(prev.map((t) => t.code));
+        const merged = [...prev];
+        for (const item of pageItems) {
+          if (!seen.has(item.code)) {
+            seen.add(item.code);
+            merged.push(item);
+          }
+        }
+        return merged;
+      });
+      setTermsHasMore(Boolean(json?.data?.has_more));
+      setTermsOffset(json?.data?.next_offset || termsOffset + 1);
+    } finally {
+      setTermsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    function onDocClick(e) {
+      if (!termMenuRef.current) return;
+      if (!termMenuRef.current.contains(e.target)) {
+        setTermMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  function onTermListScroll(e) {
+    const el = e.currentTarget;
+    const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 8;
+    if (nearBottom) {
+      loadMoreTerms();
+    }
+  }
+
   const cachedAtMinutesAgo = useMemo(() => toMinutesAgo(cachedAt), [cachedAt]);
+  const selectedTermLabel = useMemo(() => {
+    return terms.find((t) => t.code === termCode)?.description || "Select a term";
+  }, [terms, termCode]);
 
   const filteredCourses = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -143,19 +196,54 @@ export default function CourseSearch() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
+          <div className="relative" ref={termMenuRef}>
             <label className="text-xs text-slate-600">Term</label>
-            <select
-              value={termKey}
-              onChange={(e) => setTermKey(e.target.value)}
-              className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+            <button
+              type="button"
+              onClick={() => setTermMenuOpen((v) => !v)}
+              className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300 text-left flex items-center justify-between gap-2"
             >
-              {Object.entries(terms).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {k.replace(/_/g, " ")} ({v})
-                </option>
-              ))}
-            </select>
+              <span className="truncate">{selectedTermLabel}</span>
+              <span
+                aria-hidden="true"
+                className={`text-slate-500 transition-transform ${
+                  termMenuOpen ? "rotate-180" : ""
+                }`}
+              >
+                ▼
+              </span>
+            </button>
+
+            {termMenuOpen ? (
+              <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg">
+                <div
+                  className="max-h-64 overflow-y-auto py-1"
+                  onScroll={onTermListScroll}
+                >
+                  {terms.map((t) => (
+                    <button
+                      key={t.code}
+                      type="button"
+                      onClick={() => {
+                        setTermCode(t.code);
+                        setTermMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 ${
+                        t.code === termCode ? "bg-slate-100" : ""
+                      }`}
+                    >
+                      {t.description}
+                    </button>
+                  ))}
+                  {termsLoading ? (
+                    <div className="px-3 py-2 text-xs text-slate-500">Loading more terms...</div>
+                  ) : null}
+                  {!termsHasMore ? (
+                    <div className="px-3 py-2 text-xs text-slate-400">No more terms</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="md:col-span-2">
