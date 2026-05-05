@@ -158,6 +158,30 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
                 : detailData?.description || "No description available."}
             </div>
           </section>
+
+          {(detailData?.prerequisites_raw || detailData?.corequisites_raw) ? (
+            <section>
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                Requisites
+              </div>
+              {detailData?.prerequisites_raw ? (
+                <div className="mb-3">
+                  <div className="text-xs font-semibold text-slate-600 mb-1">Prerequisites</div>
+                  <div className="text-sm text-slate-700 leading-relaxed">
+                    Prerequisites: {detailData.prerequisites_raw}
+                  </div>
+                </div>
+              ) : null}
+              {detailData?.corequisites_raw ? (
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-1">Corequisites</div>
+                  <div className="text-sm text-slate-700 leading-relaxed">
+                    Pre- or corequisite: {detailData.corequisites_raw}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
         </div>
       </aside>
     </div>
