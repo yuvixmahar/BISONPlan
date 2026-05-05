@@ -1,0 +1,15 @@
+[project]
+name = "bisonplan"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "authlib>=1.7.1",
+    "bs4>=0.0.2",
+    "fastapi>=0.136.1",
+    "httpx>=0.28.1",
+    "python-dotenv>=1.2.2",
+    "sqlalchemy>=2.0.49",
+    "uvicorn[standard]>=0.30.0",
+]
