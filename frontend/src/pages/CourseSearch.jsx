@@ -267,6 +267,7 @@ export default function CourseSearch() {
   const selectedTermLabel = useMemo(() => {
     return terms.find((t) => t.code === termCode)?.description || "Select a term";
   }, [terms, termCode]);
+  const hasCourseSelection = Boolean(termCode && subject);
 
   const filteredCourses = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -447,7 +448,15 @@ export default function CourseSearch() {
         </div>
               
         <div className="mt-6">
-          {loading ? (
+          {!termCode ? (
+            <div className="text-slate-600 bg-white border border-slate-200 rounded-lg p-4">
+              Select a term to begin.
+            </div>
+          ) : !subject ? (
+            <div className="text-slate-600 bg-white border border-slate-200 rounded-lg p-4">
+              Select a department to load courses.
+            </div>
+          ) : loading ? (
             <div className="text-slate-600">Loading courses...</div>
           ) : error ? (
             <div className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
@@ -460,7 +469,7 @@ export default function CourseSearch() {
               onQuickView={setQuickViewCourse}
             />
           )}
-          {!loading && !error && filteredCourses.length === 0 ? (
+          {hasCourseSelection && !loading && !error && filteredCourses.length === 0 ? (
             <div className="text-slate-600 mt-4">Try adjusting your filters.</div>
           ) : null}
         </div>

@@ -59,6 +59,17 @@ function toAmPm(hhmm) {
   return `${twelve}:${mm} ${suffix}`;
 }
 
+function splitSectionInfo(rawText) {
+  const raw = (rawText || "").trim();
+  if (!raw) return { main: "", sectionInfo: "" };
+  const marker = /section information text\s*:/i;
+  const parts = raw.split(marker);
+  if (parts.length <= 1) return { main: raw, sectionInfo: "" };
+  const main = parts[0].trim().replace(/[.\s]+$/, "");
+  const sectionInfo = parts.slice(1).join(" ").trim();
+  return { main, sectionInfo };
+}
+
 export default function CourseCard({ course, termCode, onQuickView }) {
   const [expanded, setExpanded] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -94,6 +105,8 @@ export default function CourseCard({ course, termCode, onQuickView }) {
     detailData?.prerequisites_raw ?? course.prerequisites_raw ?? "";
   const corequisitesRaw =
     detailData?.corequisites_raw ?? course.corequisites_raw ?? "";
+  const prereqSplit = splitSectionInfo(prerequisitesRaw);
+  const coreqSplit = splitSectionInfo(corequisitesRaw);
   const displayDescription =
     detailData?.description ?? course.description ?? "";
 
@@ -197,32 +210,26 @@ export default function CourseCard({ course, termCode, onQuickView }) {
               : "No description available."}
           </div>
 
-          {(prerequisitesRaw || corequisitesRaw || course.note) ? (
+          {(prereqSplit.main || coreqSplit.main || course.note) ? (
             <div className="mt-3">
-              {prerequisitesRaw ? (
-                <div className="text-xs text-slate-600 font-semibold mb-1">Prerequisites</div>
-              ) : null}
-              {prerequisitesRaw ? (
+              {prereqSplit.main ? (
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
                   <div className="text-xs font-bold text-amber-900 mb-1">
                     Prerequisites
                   </div>
                   <div className="text-sm text-amber-950 leading-relaxed">
-                    {prerequisitesRaw}
+                    {prereqSplit.main}
                   </div>
                 </div>
               ) : null}
 
-              {corequisitesRaw ? (
-                <div className="text-xs text-slate-600 font-semibold mb-1 mt-3">Corequisites</div>
-              ) : null}
-              {corequisitesRaw ? (
+              {coreqSplit.main ? (
                 <div className="rounded-md border border-blue-200 bg-blue-50 p-3 mt-2">
                   <div className="text-xs font-bold text-blue-900 mb-1">
                     Pre- or Corequisite
                   </div>
                   <div className="text-sm text-blue-950 leading-relaxed">
-                    {corequisitesRaw}
+                    {coreqSplit.main}
                   </div>
                 </div>
               ) : null}
