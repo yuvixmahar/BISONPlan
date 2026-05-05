@@ -8,14 +8,16 @@ from ..services.aurora import fetch_courses, fetch_description, fetch_subjects, 
 from ..services.prereq_parser import parse_prereq
 
 
-async def scrape_subject(subject: str, term: str) -> list[dict]:
+async def scrape_subject(
+    subject: str, term: str, include_descriptions: bool = True
+) -> list[dict]:
     """
-    Scrape all courses + descriptions for one subject and term.
+    Scrape all courses for one subject and term.
 
     Steps:
         1) init_term_session
         2) fetch_courses (all pages)
-        3) fetch_description in batches of 5 with 0.5s sleep between batches
+        3) optionally fetch_description in batches of 5 with 0.5s sleep between batches
         4) merge course data + parsed description into one dict per section
     """
 
@@ -24,6 +26,22 @@ async def scrape_subject(subject: str, term: str) -> list[dict]:
     async with make_client() as client:
         await init_term_session(client, term)
         courses = await fetch_courses(client, subject, term)
+
+        if not include_descriptions:
+            # Fast-path: return live section data immediately and fetch
+            # description/prereq lazily via /courses/{crn}/description on demand.
+            return [
+                {
+                    **course,
+                    "description": "",
+                    "prerequisites_raw": None,
+                    "corequisites_raw": None,
+                    "prerequisites": [],
+                    "corequisites": [],
+                    "note": None,
+                }
+                for course in courses
+            ]
 
         batch_size = 5
         for i in range(0, len(courses), batch_size):
@@ -68,7 +86,9 @@ async def scrape_subject(subject: str, term: str) -> list[dict]:
     return results
 
 
-async def scrape_subject_cached(subject: str, term: str) -> dict:
+async def scrape_subject_cached(
+    subject: str, term: str, include_descriptions: bool = True
+) -> dict:
     """
     Cache-aware wrapper around scrape_subject.
 
@@ -80,7 +100,8 @@ async def scrape_subject_cached(subject: str, term: str) -> dict:
       }
     """
 
-    key = f"courses:{term}:{subject}"
+    detail_mode = "full" if include_descriptions else "basic"
+    key = f"courses:{term}:{subject}:{detail_mode}"
     stale_entry = cache.get(key)
     now = time.time()
 
@@ -91,14 +112,14 @@ async def scrape_subject_cached(subject: str, term: str) -> dict:
     if stale_entry and cache.is_stale(key):
         cached_at, stale_data = stale_entry
         try:
-            fresh_data = await scrape_subject(subject, term)
+            fresh_data = await scrape_subject(subject, term, include_descriptions)
             cache.set(key, fresh_data)
             return {"source": "live", "cached_at": int(time.time()), "data": fresh_data}
         except (httpx.HTTPStatusError, httpx.RequestError):
             return {"source": "stale", "cached_at": int(cached_at), "data": stale_data}
 
     # No cache or cache is too old -> must be live; failures propagate.
-    fresh_data = await scrape_subject(subject, term)
+    fresh_data = await scrape_subject(subject, term, include_descriptions)
     cache.set(key, fresh_data)
     return {"source": "live", "cached_at": int(time.time()), "data": fresh_data}
 

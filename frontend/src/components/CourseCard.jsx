@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import SeatBadge from "./SeatBadge.jsx";
+import { getCourseDescription } from "../api/client.js";
 
 function pickFirst(obj, keys, fallback = "") {
   for (const k of keys) {
@@ -30,8 +31,12 @@ function formatMeeting(course) {
   return "";
 }
 
-export default function CourseCard({ course }) {
+export default function CourseCard({ course, termCode }) {
   const [expanded, setExpanded] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLoaded, setDetailLoaded] = useState(false);
+  const [detailError, setDetailError] = useState("");
+  const [detailData, setDetailData] = useState(null);
 
   const code = useMemo(() => formatCode(course), [course]);
   const title = useMemo(
@@ -56,14 +61,38 @@ export default function CourseCard({ course }) {
   const seatsAvailable = pickFirst(course, ["seatsAvailable", "seats_avail", "seats"], null);
   const waitlistCount = pickFirst(course, ["waitlistCount", "waitlist", "waitCount", "waitlistCountText"], null);
 
-  const prerequisites = course.prerequisites || [];
-  const corequisites = course.corequisites || [];
+  const prerequisites = detailData?.prerequisites ?? course.prerequisites ?? [];
+  const corequisites = detailData?.corequisites ?? course.corequisites ?? [];
+  const displayDescription =
+    detailData?.description ?? course.description ?? "";
+
+  async function toggleExpanded() {
+    const next = !expanded;
+    setExpanded(next);
+    if (!next) return;
+    if (detailLoaded || detailLoading) return;
+
+    const crn = pickFirst(course, ["courseReferenceNumber", "crn"], "");
+    if (!crn || !termCode) return;
+
+    setDetailLoading(true);
+    setDetailError("");
+    try {
+      const res = await getCourseDescription(crn, termCode);
+      setDetailData(res?.data || null);
+      setDetailLoaded(true);
+    } catch (e) {
+      setDetailError("Failed to load description.");
+    } finally {
+      setDetailLoading(false);
+    }
+  }
 
   return (
     <div className="border border-slate-200 rounded-lg bg-white shadow-sm">
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={toggleExpanded}
         className="w-full text-left px-4 py-3 flex gap-3 items-start"
       >
         <div className="flex-1">
@@ -97,7 +126,13 @@ export default function CourseCard({ course }) {
       {expanded ? (
         <div className="px-4 pb-4 -mt-2">
           <div className="text-sm text-slate-700 leading-relaxed mt-1">
-            {course.description ? course.description : "No description available."}
+            {detailLoading
+              ? "Loading description..."
+              : detailError
+              ? detailError
+              : displayDescription
+              ? displayDescription
+              : "No description available."}
           </div>
 
           {(prerequisites.length > 0 || corequisites.length > 0 || course.note) ? (
