@@ -31,7 +31,35 @@ function formatMeeting(course) {
   return "";
 }
 
-export default function CourseCard({ course, termCode }) {
+function meetingEntries(course) {
+  const mf = Array.isArray(course?.meetingsFaculty) ? course.meetingsFaculty : [];
+  return mf.map((m) => m?.meetingTime || null).filter(Boolean);
+}
+
+function meetingDays(mt) {
+  const days = [
+    ["monday", "M"],
+    ["tuesday", "T"],
+    ["wednesday", "W"],
+    ["thursday", "R"],
+    ["friday", "F"],
+    ["saturday", "S"],
+    ["sunday", "U"],
+  ];
+  return days.filter(([k]) => Boolean(mt?.[k])).map(([, label]) => label).join(" ");
+}
+
+function toAmPm(hhmm) {
+  if (!hhmm || String(hhmm).length < 3) return "";
+  const raw = String(hhmm).padStart(4, "0");
+  const hh = Number(raw.slice(0, 2));
+  const mm = raw.slice(2);
+  const suffix = hh >= 12 ? "PM" : "AM";
+  const twelve = hh % 12 === 0 ? 12 : hh % 12;
+  return `${twelve}:${mm} ${suffix}`;
+}
+
+export default function CourseCard({ course, termCode, onQuickView }) {
   const [expanded, setExpanded] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailLoaded, setDetailLoaded] = useState(false);
@@ -57,6 +85,7 @@ export default function CourseCard({ course, termCode }) {
   );
 
   const meeting = useMemo(() => formatMeeting(course), [course]);
+  const meetings = useMemo(() => meetingEntries(course), [course]);
 
   const seatsAvailable = pickFirst(course, ["seatsAvailable", "seats_avail", "seats"], null);
   const waitlistCount = pickFirst(course, ["waitlistCount", "waitlist", "waitCount", "waitlistCountText"], null);
@@ -114,12 +143,40 @@ export default function CourseCard({ course, termCode }) {
                   Instructor: {instructor}
                 </div>
               ) : null}
+              {meetings.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {meetings.slice(0, 2).map((mt, idx) => {
+                    const days = meetingDays(mt);
+                    const time = `${toAmPm(mt.beginTime)}-${toAmPm(mt.endTime)}`.replace(/\s+/g, " ");
+                    const loc = mt.buildingDescription || mt.building || mt.room || "TBA";
+                    return (
+                      <span
+                        key={`${idx}-${mt.beginTime}-${mt.endTime}`}
+                        className="text-[11px] px-2 py-1 rounded border border-slate-200 bg-slate-50 text-slate-700"
+                      >
+                        {days ? `${days} ` : ""}{time} • {loc}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
 
         <div className="shrink-0">
           <SeatBadge seatsAvailable={seatsAvailable} waitlistCount={waitlistCount} />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onQuickView?.(course);
+            }}
+            className="mt-2 w-full text-[11px] px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+          >
+            Quick View
+          </button>
         </div>
       </button>
 

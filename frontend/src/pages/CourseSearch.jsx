@@ -5,6 +5,7 @@ import FilterPanel from "../components/FilterPanel.jsx";
 import SearchBar from "../components/SearchBar.jsx";
 import CourseList from "../components/CourseList.jsx";
 import StaleBanner from "../components/StaleBanner.jsx";
+import QuickViewDrawer from "../components/QuickViewDrawer.jsx";
 
 function toMinutesAgo(cachedAtSeconds) {
   if (!cachedAtSeconds) return null;
@@ -48,6 +49,7 @@ export default function CourseSearch() {
   const [openOnly, setOpenOnly] = useState(true);
   const [creditHour, setCreditHour] = useState("");
   const [scheduleType, setScheduleType] = useState("any");
+  const [quickViewCourse, setQuickViewCourse] = useState(null);
 
   useEffect(() => {
     async function runInitialTerms() {
@@ -450,14 +452,25 @@ export default function CourseSearch() {
               {error}
             </div>
           ) : (
-            <CourseList courses={filteredCourses} termCode={termCode} />
+            <CourseList
+              courses={filteredCourses}
+              termCode={termCode}
+              onQuickView={setQuickViewCourse}
+            />
           )}
           {!loading && !error && filteredCourses.length === 0 ? (
             <div className="text-slate-600 mt-4">Try adjusting your filters.</div>
           ) : null}
         </div>
       </div>
-      
+
+      <QuickViewDrawer
+        open={Boolean(quickViewCourse)}
+        course={quickViewCourse}
+        termCode={termCode}
+        onClose={() => setQuickViewCourse(null)}
+      />
+
     </div>
     
   );
