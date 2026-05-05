@@ -16,9 +16,14 @@ def _wrap(success: bool, source: str, cached_at: int | None, data):
 async def get_courses(
     subject: str = Query(..., min_length=1),
     term: str = Query(..., min_length=1),
+    includeDescriptions: bool = Query(False, alias="includeDescriptions"),
 ):
     try:
-        result = await scrape_subject_cached(subject=subject, term=term)
+        result = await scrape_subject_cached(
+            subject=subject,
+            term=term,
+            include_descriptions=includeDescriptions,
+        )
         return _wrap(True, result["source"], result["cached_at"], result["data"])
     except (httpx.HTTPStatusError, httpx.RequestError) as e:
         raise HTTPException(

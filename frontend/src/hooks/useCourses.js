@@ -20,7 +20,7 @@ export default function useCourses(subject, term) {
       setLoading(true);
       setError(null);
       try {
-        const res = await getCourses(subject, term);
+        const res = await getCourses(subject, term, false);
         if (cancelled) return;
         setData(res.data || []);
         setIsStale(res.source === "stale");

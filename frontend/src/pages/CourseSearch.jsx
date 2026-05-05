@@ -40,7 +40,9 @@ export default function CourseSearch() {
   const [subjectLoading, setSubjectLoading] = useState(false);
   const [subjectMenuOpen, setSubjectMenuOpen] = useState(false);
   const [subjectSessionId, setSubjectSessionId] = useState("");
+  const [subjectActiveIndex, setSubjectActiveIndex] = useState(-1);
   const subjectMenuRef = useRef(null);
+  const subjectListRef = useRef(null);
 
   const [query, setQuery] = useState("");
   const [openOnly, setOpenOnly] = useState(true);
@@ -184,6 +186,7 @@ export default function CourseSearch() {
       });
       setSubjectHasMore(Boolean(json?.data?.has_more));
       setSubjectOffset(json?.data?.next_offset || offset + 1);
+      setSubjectActiveIndex(items.length ? 0 : -1);
     } finally {
       setSubjectLoading(false);
     }
@@ -194,6 +197,7 @@ export default function CourseSearch() {
     setSubjectInput(value);
     setSubjectMenuOpen(true);
     setSubjectOffset(1);
+    setSubjectActiveIndex(-1);
   }
 
   useEffect(() => {
@@ -211,6 +215,49 @@ export default function CourseSearch() {
       fetchSubjectPage(subjectInput.trim(), subjectOffset, true);
     }
   }
+
+  function selectSubjectOption(option) {
+    setSubject(option.code);
+    setSubjectInput(`${option.code} - ${option.description}`);
+    setSubjectMenuOpen(false);
+  }
+
+  function onSubjectInputKeyDown(e) {
+    if (!subjectMenuOpen && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      setSubjectMenuOpen(true);
+      return;
+    }
+
+    if (!subjectMenuOpen) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSubjectActiveIndex((prev) => {
+        const next = Math.min(prev + 1, subjects.length - 1);
+        return next;
+      });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSubjectActiveIndex((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === "Enter") {
+      if (subjectActiveIndex >= 0 && subjectActiveIndex < subjects.length) {
+        e.preventDefault();
+        selectSubjectOption(subjects[subjectActiveIndex]);
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setSubjectMenuOpen(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!subjectMenuOpen || subjectActiveIndex < 0 || !subjectListRef.current) return;
+    const container = subjectListRef.current;
+    const node = container.querySelector(`[data-subject-index="${subjectActiveIndex}"]`);
+    if (node) {
+      node.scrollIntoView({ block: "nearest" });
+    }
+  }, [subjectActiveIndex, subjectMenuOpen]);
 
   const cachedAtMinutesAgo = useMemo(() => toMinutesAgo(cachedAt), [cachedAt]);
   const selectedTermLabel = useMemo(() => {
@@ -339,23 +386,28 @@ export default function CourseSearch() {
                 value={subjectInput}
                 onChange={onSubjectInputChange}
                 onFocus={() => setSubjectMenuOpen(true)}
+                onKeyDown={onSubjectInputKeyDown}
                 placeholder="Type subject code or name..."
                 className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
               />
               {subjectMenuOpen ? (
                 <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg">
-                  <div className="max-h-64 overflow-y-auto py-1" onScroll={onSubjectListScroll}>
-                    {subjects.map((s) => (
+                  <div
+                    ref={subjectListRef}
+                    className="max-h-64 overflow-y-auto py-1"
+                    onScroll={onSubjectListScroll}
+                  >
+                    {subjects.map((s, idx) => (
                       <button
                         key={s.code}
+                        data-subject-index={idx}
                         type="button"
-                        onClick={() => {
-                          setSubject(s.code);
-                          setSubjectInput(`${s.code} - ${s.description}`);
-                          setSubjectMenuOpen(false);
-                        }}
+                        onMouseEnter={() => setSubjectActiveIndex(idx)}
+                        onClick={() => selectSubjectOption(s)}
                         className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 ${
-                          s.code === subject ? "bg-slate-100" : ""
+                          idx === subjectActiveIndex || s.code === subject
+                            ? "bg-slate-100"
+                            : ""
                         }`}
                       >
                         {s.code} - {s.description}
@@ -398,7 +450,7 @@ export default function CourseSearch() {
               {error}
             </div>
           ) : (
-            <CourseList courses={filteredCourses} />
+            <CourseList courses={filteredCourses} termCode={termCode} />
           )}
           {!loading && !error && filteredCourses.length === 0 ? (
             <div className="text-slate-600 mt-4">Try adjusting your filters.</div>
