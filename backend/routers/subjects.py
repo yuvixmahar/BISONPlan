@@ -13,16 +13,42 @@ def _wrap(success: bool, source: str, cached_at: int | None, data):
 @router.get("/subjects")
 async def get_subjects(
     term: str = Query(..., min_length=1),
+    searchTerm: str = Query("", alias="searchTerm"),
+    offset: int = Query(1, ge=1),
+    max: int = Query(10, ge=1, le=50),
+    uniqueSessionId: str | None = Query(None, alias="uniqueSessionId"),
 ):
     try:
         async with make_client() as client:
             await init_term_session(client, term)
-            subject_codes = await fetch_subjects(client, term)
+            page = await fetch_subjects(
+                client,
+                term=term,
+                search_term=searchTerm,
+                offset=offset,
+                max_items=max,
+                unique_session_id=uniqueSessionId,
+            )
 
-        # Aurora's subject endpoint is not guaranteed to provide descriptions.
-        # Provide a placeholder description for now (same as code) so the
-        # frontend can render a clean dropdown immediately.
-        data = [{"code": code, "description": code} for code in subject_codes]
+        normalized: list[dict[str, str]] = []
+        for item in page:
+            if not isinstance(item, dict):
+                continue
+            code = item.get("code")
+            if not code:
+                continue
+            description = item.get("description") or code
+            normalized.append({"code": str(code), "description": str(description)})
+
+        has_more = len(normalized) >= max
+        data = {
+            "items": normalized,
+            "offset": offset,
+            "max": max,
+            "searchTerm": searchTerm,
+            "has_more": has_more,
+            "next_offset": offset + 1 if has_more else None,
+        }
         return _wrap(True, "live", None, data)
     except (httpx.HTTPStatusError, httpx.RequestError) as e:
         raise HTTPException(

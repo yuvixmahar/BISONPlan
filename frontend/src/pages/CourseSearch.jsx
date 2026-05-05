@@ -34,6 +34,13 @@ export default function CourseSearch() {
 
   const [subjects, setSubjects] = useState([]);
   const [subject, setSubject] = useState("");
+  const [subjectInput, setSubjectInput] = useState("");
+  const [subjectOffset, setSubjectOffset] = useState(1);
+  const [subjectHasMore, setSubjectHasMore] = useState(false);
+  const [subjectLoading, setSubjectLoading] = useState(false);
+  const [subjectMenuOpen, setSubjectMenuOpen] = useState(false);
+  const [subjectSessionId, setSubjectSessionId] = useState("");
+  const subjectMenuRef = useRef(null);
 
   const [query, setQuery] = useState("");
   const [openOnly, setOpenOnly] = useState(true);
@@ -61,13 +68,27 @@ export default function CourseSearch() {
 
   useEffect(() => {
     if (!termCode) return;
-    async function run() {
-      const json = await getSubjects(termCode);
-      setSubjects(json?.data || []);
-      const first = (json?.data || [])[0]?.code || "";
-      setSubject(first);
+    async function runInitialSubjects() {
+      setSubjectLoading(true);
+      const nextSession = `bp-${termCode}-${Date.now()}`;
+      setSubjectSessionId(nextSession);
+      try {
+        const json = await getSubjects(termCode, "", 1, 10, nextSession);
+        const items = json?.data?.items || [];
+        setSubjects(items);
+        setSubjectHasMore(Boolean(json?.data?.has_more));
+        setSubjectOffset(json?.data?.next_offset || 2);
+        const first = items[0]?.code || "";
+        setSubject(first);
+        const firstLabel = items[0]
+          ? `${items[0].code} - ${items[0].description}`
+          : "";
+        setSubjectInput(firstLabel);
+      } finally {
+        setSubjectLoading(false);
+      }
     }
-    run();
+    runInitialSubjects();
   }, [termCode]);
 
   useEffect(() => {
@@ -121,6 +142,9 @@ export default function CourseSearch() {
       if (!termMenuRef.current.contains(e.target)) {
         setTermMenuOpen(false);
       }
+      if (subjectMenuRef.current && !subjectMenuRef.current.contains(e.target)) {
+        setSubjectMenuOpen(false);
+      }
     }
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
@@ -131,6 +155,60 @@ export default function CourseSearch() {
     const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 8;
     if (nearBottom) {
       loadMoreTerms();
+    }
+  }
+
+  async function fetchSubjectPage(searchText, offset, append) {
+    if (!termCode) return;
+    setSubjectLoading(true);
+    try {
+      const json = await getSubjects(
+        termCode,
+        searchText,
+        offset,
+        10,
+        subjectSessionId || `bp-${termCode}-${Date.now()}`
+      );
+      const items = json?.data?.items || [];
+      setSubjects((prev) => {
+        if (!append) return items;
+        const seen = new Set(prev.map((s) => s.code));
+        const merged = [...prev];
+        for (const item of items) {
+          if (!seen.has(item.code)) {
+            seen.add(item.code);
+            merged.push(item);
+          }
+        }
+        return merged;
+      });
+      setSubjectHasMore(Boolean(json?.data?.has_more));
+      setSubjectOffset(json?.data?.next_offset || offset + 1);
+    } finally {
+      setSubjectLoading(false);
+    }
+  }
+
+  function onSubjectInputChange(e) {
+    const value = e.target.value;
+    setSubjectInput(value);
+    setSubjectMenuOpen(true);
+    setSubjectOffset(1);
+  }
+
+  useEffect(() => {
+    if (!termCode || !subjectMenuOpen) return;
+    const t = setTimeout(() => {
+      fetchSubjectPage(subjectInput.trim(), 1, false);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [subjectInput, termCode, subjectMenuOpen]);
+
+  function onSubjectListScroll(e) {
+    const el = e.currentTarget;
+    const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 8;
+    if (nearBottom && !subjectLoading && subjectHasMore) {
+      fetchSubjectPage(subjectInput.trim(), subjectOffset, true);
     }
   }
 
@@ -204,14 +282,22 @@ export default function CourseSearch() {
               className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300 text-left flex items-center justify-between gap-2"
             >
               <span className="truncate">{selectedTermLabel}</span>
-              <span
+              <svg
                 aria-hidden="true"
-                className={`text-slate-500 transition-transform ${
+                viewBox="0 0 20 20"
+                fill="none"
+                className={`h-4 w-4 text-slate-400 transition-transform ${
                   termMenuOpen ? "rotate-180" : ""
                 }`}
               >
-                ▼
-              </span>
+                <path
+                  d="M5 7.5L10 12.5L15 7.5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
 
             {termMenuOpen ? (
@@ -248,18 +334,43 @@ export default function CourseSearch() {
 
           <div className="md:col-span-2">
             <label className="text-xs text-slate-600">Subject</label>
-            <select
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-              disabled={!subjects.length}
-            >
-              {subjects.map((s) => (
-                <option key={s.code} value={s.code}>
-                  {s.code} - {s.description}
-                </option>
-              ))}
-            </select>
+            <div className="relative" ref={subjectMenuRef}>
+              <input
+                value={subjectInput}
+                onChange={onSubjectInputChange}
+                onFocus={() => setSubjectMenuOpen(true)}
+                placeholder="Type subject code or name..."
+                className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+              />
+              {subjectMenuOpen ? (
+                <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg">
+                  <div className="max-h-64 overflow-y-auto py-1" onScroll={onSubjectListScroll}>
+                    {subjects.map((s) => (
+                      <button
+                        key={s.code}
+                        type="button"
+                        onClick={() => {
+                          setSubject(s.code);
+                          setSubjectInput(`${s.code} - ${s.description}`);
+                          setSubjectMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 ${
+                          s.code === subject ? "bg-slate-100" : ""
+                        }`}
+                      >
+                        {s.code} - {s.description}
+                      </button>
+                    ))}
+                    {subjectLoading ? (
+                      <div className="px-3 py-2 text-xs text-slate-500">Loading subjects...</div>
+                    ) : null}
+                    {!subjectLoading && subjects.length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-slate-400">No matches</div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 

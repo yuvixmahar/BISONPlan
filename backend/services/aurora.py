@@ -95,50 +95,38 @@ async def fetch_description(client: httpx.AsyncClient, crn: str, term: str) -> d
     return parse_description_html(r.text)
 
 
-async def fetch_subjects(client: httpx.AsyncClient, term: str) -> list[str]:
+async def fetch_subjects(
+    client: httpx.AsyncClient,
+    term: str,
+    search_term: str = "",
+    offset: int = 1,
+    max_items: int = 10,
+    unique_session_id: str | None = None,
+) -> list[dict]:
     """
-    GET /classSearch/get_subject with pagination.
-    Returns subject codes e.g. ["ACC", "ECE", "MATH", ...]
+    GET /classSearch/get_subject page.
+    Returns one page of subject objects with code/description.
     """
+    params = {
+        "searchTerm": search_term,
+        "term": term,
+        "offset": offset,
+        "max": max_items,
+    }
+    if unique_session_id:
+        params["uniqueSessionId"] = unique_session_id
 
-    subjects: list[str] = []
-    offset = 1
-    max_per_page = 50
-
-    while True:
-        r = await client.get(
-            f"{BASE_URL}/classSearch/get_subject",
-            params={
-                "searchTerm": "",
-                "term": term,
-                "offset": offset,
-                "max": max_per_page,
-            },
-        )
-        r.raise_for_status()
-        data = r.json()
-        if not data:
-            break
-
-        # Each entry is usually an object with "code"
-        for s in data:
-            if isinstance(s, dict) and "code" in s:
-                subjects.append(str(s["code"]))
-
-        if len(data) < max_per_page:
-            break
-
-        offset += max_per_page
-
-    # Deduplicate
-    seen: set[str] = set()
-    uniq: list[str] = []
-    for code in subjects:
-        if code not in seen:
-            seen.add(code)
-            uniq.append(code)
-
-    return uniq
+    r = await client.get(
+        f"{BASE_URL}/classSearch/get_subject",
+        params=params,
+    )
+    r.raise_for_status()
+    payload = r.json()
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict) and isinstance(payload.get("data"), list):
+        return payload["data"]
+    return []
 
 
 async def fetch_terms(

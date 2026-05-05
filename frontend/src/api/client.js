@@ -12,8 +12,16 @@ export async function getCourses(subject, term) {
   return res.data;
 }
 
-export async function getSubjects(term) {
-  const res = await client.get("/subjects", { params: { term } });
+export async function getSubjects(
+  term,
+  searchTerm = "",
+  offset = 1,
+  max = 10,
+  uniqueSessionId = ""
+) {
+  const res = await client.get("/subjects", {
+    params: { term, searchTerm, offset, max, uniqueSessionId },
+  });
   return res.data;
 }
 
