@@ -11,7 +11,7 @@ const DAYS = [
 ];
 
 const START_MINUTES = 8 * 60;
-const END_MINUTES = 21 * 60;
+const END_MINUTES = 22 * 60;
 const TOTAL_MINUTES = END_MINUTES - START_MINUTES;
 
 function pickFirst(obj, keys, fallback = "") {

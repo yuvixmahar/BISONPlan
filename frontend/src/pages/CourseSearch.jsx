@@ -6,7 +6,6 @@ import SearchBar from "../components/SearchBar.jsx";
 import CourseList from "../components/CourseList.jsx";
 import StaleBanner from "../components/StaleBanner.jsx";
 import QuickViewDrawer from "../components/QuickViewDrawer.jsx";
-import WeeklyPlanner from "../components/WeeklyPlanner.jsx";
 
 function toMinutesAgo(cachedAtSeconds) {
   if (!cachedAtSeconds) return null;
@@ -59,7 +58,11 @@ function inTimeWindow(course, timeFilter) {
   });
 }
 
-export default function CourseSearch() {
+export default function CourseSearch({
+  onAddToPlanner,
+  plannerMessage,
+  onClearPlannerMessage,
+}) {
   const [health, setHealth] = useState({ aurora_status: "up", latency_ms: null });
 
   const [terms, setTerms] = useState([]);
@@ -93,11 +96,6 @@ export default function CourseSearch() {
   const [timeFilter, setTimeFilter] = useState("any");
   const [instructorFilter, setInstructorFilter] = useState("");
   const [quickViewCourse, setQuickViewCourse] = useState(null);
-  const [activePlannerTerm, setActivePlannerTerm] = useState("fall");
-  const [plannerByTerm, setPlannerByTerm] = useState({
-    fall: [],
-    winter: [],
-  });
 
   useEffect(() => {
     async function runInitialTerms() {
@@ -421,34 +419,12 @@ export default function CourseSearch() {
     const selected = terms.find((t) => t.code === termCode)?.description || "";
     if (/winter/i.test(selected)) return "winter";
     if (/fall/i.test(selected)) return "fall";
-    return activePlannerTerm;
+    return "fall";
   }
 
   function addCourseToPlanner(course) {
     const targetTerm = plannerTermFromSelection();
-    const courseId = course?.courseReferenceNumber || course?.crn;
-    if (!courseId) return;
-
-    setPlannerByTerm((prev) => {
-      const existing = prev[targetTerm] || [];
-      if (existing.some((item) => (item.courseReferenceNumber || item.crn) === courseId)) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [targetTerm]: [...existing, course],
-      };
-    });
-    setActivePlannerTerm(targetTerm);
-  }
-
-  function removeCourseFromPlanner(termKey, courseId) {
-    setPlannerByTerm((prev) => ({
-      ...prev,
-      [termKey]: (prev[termKey] || []).filter(
-        (item) => (item.courseReferenceNumber || item.crn) !== courseId
-      ),
-    }));
+    onAddToPlanner?.(course, targetTerm);
   }
 
   return (
@@ -611,6 +587,18 @@ export default function CourseSearch() {
         </div>
               
         <div className="mt-6">
+          {plannerMessage ? (
+            <div className="mb-3 text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start justify-between gap-3">
+              <span>{plannerMessage}</span>
+              <button
+                type="button"
+                onClick={onClearPlannerMessage}
+                className="text-xs px-2 py-1 rounded border border-amber-300 hover:bg-amber-100"
+              >
+                Dismiss
+              </button>
+            </div>
+          ) : null}
           {!termCode ? (
             <div className="text-slate-600 bg-white border border-slate-200 rounded-lg p-4">
               Select a term to begin.
@@ -637,13 +625,6 @@ export default function CourseSearch() {
             <div className="text-slate-600 mt-4">Try adjusting your filters.</div>
           ) : null}
         </div>
-
-        <WeeklyPlanner
-          activePlannerTerm={activePlannerTerm}
-          setActivePlannerTerm={setActivePlannerTerm}
-          plannerByTerm={plannerByTerm}
-          onRemoveCourse={removeCourseFromPlanner}
-        />
       </div>
 
       <QuickViewDrawer
