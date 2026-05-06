@@ -10,6 +10,7 @@ It works as a live proxy/enhancement layer over Aurora (Banner SSB), not a mirro
 - Load course lists fast (details fetched lazily when needed).
 - Open a Quick View drawer for meeting details, dates, and requisites.
 - Show prerequisite/corequisite text in Aurora wording to avoid misinformation.
+- Plan a week at a glance for Fall and Winter Term.
 
 ## Tech Stack
 
