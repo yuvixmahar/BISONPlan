@@ -62,11 +62,13 @@ function getMeetings(course) {
 function normalizeEvents(courses) {
   const out = [];
   for (const course of courses) {
+    const plannerId = course?._plannerId || "";
     const code = courseCode(course);
     const section = getSection(course);
     const title = pickFirst(course, ["title", "courseTitle", "subjectTitle"], "");
     const meetings = getMeetings(course);
-    for (const mt of meetings) {
+    for (let idx = 0; idx < meetings.length; idx += 1) {
+      const mt = meetings[idx];
       const start = toMinutes(mt.beginTime);
       const end = toMinutes(mt.endTime);
       if (start == null || end == null || end <= start) continue;
@@ -79,7 +81,7 @@ function normalizeEvents(courses) {
       for (const [dayKey, dayLabel] of DAYS) {
         if (!mt?.[dayKey]) continue;
         out.push({
-          id: `${code}-${section}-${dayKey}-${start}-${end}-${location}`,
+          id: `${plannerId}-${idx}-${dayKey}-${start}-${end}`,
           dayKey,
           dayLabel,
           start,
@@ -158,7 +160,7 @@ export default function WeeklyPlanner({
               {plannedCourses.map((course) => {
                 const code = courseCode(course);
                 const section = getSection(course);
-                const id = pickFirst(course, ["courseReferenceNumber", "crn"], `${code}-${section}`);
+                const id = course?._plannerId || `${code}-${section}`;
                 return (
                   <span
                     key={id}
@@ -215,6 +217,8 @@ export default function WeeklyPlanner({
                     {(byDay[dayKey] || []).map((ev) => {
                       const topPct = ((ev.start - START_MINUTES) / TOTAL_MINUTES) * 100;
                       const heightPct = ((ev.end - ev.start) / TOTAL_MINUTES) * 100;
+                      const durationMinutes = ev.end - ev.start;
+                      const showWrappedLocation = durationMinutes >= 120;
                       return (
                         <div
                           key={ev.id}
@@ -232,7 +236,13 @@ export default function WeeklyPlanner({
                           <div className="truncate">
                             {toTimeLabel(ev.start)} - {toTimeLabel(ev.end)}
                           </div>
-                          <div className="truncate">{ev.location}</div>
+                          {showWrappedLocation ? (
+                            <div className="mt-0.5 wrap-break-word whitespace-normal">
+                              {ev.location}
+                            </div>
+                          ) : (
+                            <div className="truncate">{ev.location}</div>
+                          )}
                         </div>
                       );
                     })}
