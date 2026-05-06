@@ -113,7 +113,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="font-heading text-xl text-slate-900">BISONplan</div>
           <nav className="inline-flex rounded-lg border border-slate-200 p-1">
