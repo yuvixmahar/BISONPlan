@@ -13,6 +13,7 @@ const DAYS = [
 const START_MINUTES = 8 * 60;
 const END_MINUTES = 22 * 60;
 const TOTAL_MINUTES = END_MINUTES - START_MINUTES;
+const GRID_HEIGHT_PX = 1180;
 
 function pickFirst(obj, keys, fallback = "") {
   for (const k of keys) {
@@ -46,7 +47,11 @@ function courseCode(course) {
 }
 
 function getSection(course) {
-  return pickFirst(course, ["section", "classSection", "enrollmentSection"], "");
+  return pickFirst(
+    course,
+    ["section", "classSection", "enrollmentSection", "sequenceNumber"],
+    ""
+  );
 }
 
 function getMeetings(course) {
@@ -70,6 +75,7 @@ function normalizeEvents(courses) {
         mt.room ? `Room ${mt.room}` : "",
       ].filter(Boolean);
       const location = locationParts.join(" - ") || "Location TBA";
+      const sectionType = mt.meetingTypeDescription || mt.meetingType || "Class";
       for (const [dayKey, dayLabel] of DAYS) {
         if (!mt?.[dayKey]) continue;
         out.push({
@@ -81,6 +87,7 @@ function normalizeEvents(courses) {
           code,
           section,
           title,
+          sectionType,
           location,
         });
       }
@@ -180,7 +187,7 @@ export default function WeeklyPlanner({
                   </div>
                 ))}
 
-                <div className="relative" style={{ height: "780px" }}>
+                <div className="relative" style={{ height: `${GRID_HEIGHT_PX}px` }}>
                   {hours.map((minute) => (
                     <div
                       key={minute}
@@ -196,7 +203,7 @@ export default function WeeklyPlanner({
                   <div
                     key={dayKey}
                     className="relative rounded-lg border border-slate-200 bg-slate-50/40"
-                    style={{ height: "780px" }}
+                    style={{ height: `${GRID_HEIGHT_PX}px` }}
                   >
                     {hours.map((minute) => (
                       <div
@@ -211,12 +218,17 @@ export default function WeeklyPlanner({
                       return (
                         <div
                           key={ev.id}
-                          className="absolute left-1 right-1 rounded-md border border-blue-200 bg-blue-100 px-2 py-1 text-[11px] text-blue-950 shadow-sm overflow-hidden"
-                          style={{ top: `${topPct}%`, height: `${Math.max(heightPct, 5)}%` }}
+                          className="absolute left-1 right-1 rounded-md border border-blue-200 bg-blue-100 px-2 py-1.5 text-[11px] leading-tight text-blue-950 shadow-sm overflow-hidden"
+                          style={{
+                            top: `${topPct}%`,
+                            height: `${Math.max(heightPct, 4)}%`,
+                          }}
                           title={`${ev.code} ${ev.section} (${dayLabel})`}
                         >
-                          <div className="font-semibold truncate">{ev.code}</div>
-                          {ev.section ? <div className="truncate">Sec {ev.section}</div> : null}
+                          <div className="font-semibold truncate">
+                            {ev.code} {ev.section || "TBA"}
+                          </div>
+                          <div className="truncate">{ev.sectionType}</div>
                           <div className="truncate">
                             {toTimeLabel(ev.start)} - {toTimeLabel(ev.end)}
                           </div>
