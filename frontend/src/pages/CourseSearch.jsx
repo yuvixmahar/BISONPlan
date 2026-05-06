@@ -6,6 +6,7 @@ import SearchBar from "../components/SearchBar.jsx";
 import CourseList from "../components/CourseList.jsx";
 import StaleBanner from "../components/StaleBanner.jsx";
 import QuickViewDrawer from "../components/QuickViewDrawer.jsx";
+import WeeklyPlanner from "../components/WeeklyPlanner.jsx";
 
 function toMinutesAgo(cachedAtSeconds) {
   if (!cachedAtSeconds) return null;
@@ -92,6 +93,11 @@ export default function CourseSearch() {
   const [timeFilter, setTimeFilter] = useState("any");
   const [instructorFilter, setInstructorFilter] = useState("");
   const [quickViewCourse, setQuickViewCourse] = useState(null);
+  const [activePlannerTerm, setActivePlannerTerm] = useState("fall");
+  const [plannerByTerm, setPlannerByTerm] = useState({
+    fall: [],
+    winter: [],
+  });
 
   useEffect(() => {
     async function runInitialTerms() {
@@ -411,6 +417,40 @@ export default function CourseSearch() {
     setInstructorFilter("");
   }
 
+  function plannerTermFromSelection() {
+    const selected = terms.find((t) => t.code === termCode)?.description || "";
+    if (/winter/i.test(selected)) return "winter";
+    if (/fall/i.test(selected)) return "fall";
+    return activePlannerTerm;
+  }
+
+  function addCourseToPlanner(course) {
+    const targetTerm = plannerTermFromSelection();
+    const courseId = course?.courseReferenceNumber || course?.crn;
+    if (!courseId) return;
+
+    setPlannerByTerm((prev) => {
+      const existing = prev[targetTerm] || [];
+      if (existing.some((item) => (item.courseReferenceNumber || item.crn) === courseId)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [targetTerm]: [...existing, course],
+      };
+    });
+    setActivePlannerTerm(targetTerm);
+  }
+
+  function removeCourseFromPlanner(termKey, courseId) {
+    setPlannerByTerm((prev) => ({
+      ...prev,
+      [termKey]: (prev[termKey] || []).filter(
+        (item) => (item.courseReferenceNumber || item.crn) !== courseId
+      ),
+    }));
+  }
+
   return (
     <div className="min-h-screen">
       <StaleBanner isStale={isStale} cachedAtMinutesAgo={cachedAtMinutesAgo} />
@@ -590,12 +630,20 @@ export default function CourseSearch() {
               courses={filteredCourses}
               termCode={termCode}
               onQuickView={setQuickViewCourse}
+              onAddToPlanner={addCourseToPlanner}
             />
           )}
           {hasCourseSelection && !loading && !error && filteredCourses.length === 0 ? (
             <div className="text-slate-600 mt-4">Try adjusting your filters.</div>
           ) : null}
         </div>
+
+        <WeeklyPlanner
+          activePlannerTerm={activePlannerTerm}
+          setActivePlannerTerm={setActivePlannerTerm}
+          plannerByTerm={plannerByTerm}
+          onRemoveCourse={removeCourseFromPlanner}
+        />
       </div>
 
       <QuickViewDrawer
