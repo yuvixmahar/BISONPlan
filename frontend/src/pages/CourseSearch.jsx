@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getHealth, getSubjects, getTerms } from "../api/client.js";
+import { getSubjects, getTerms } from "../api/client.js";
 import useCourses from "../hooks/useCourses.js";
 import FilterPanel from "../components/FilterPanel.jsx";
 import SearchBar from "../components/SearchBar.jsx";
@@ -63,8 +63,6 @@ export default function CourseSearch({
   plannerMessage,
   onClearPlannerMessage,
 }) {
-  const [health, setHealth] = useState({ aurora_status: "up", latency_ms: null });
-
   const [terms, setTerms] = useState([]);
   const [termCode, setTermCode] = useState("");
   const [termsOffset, setTermsOffset] = useState(1);
@@ -142,25 +140,6 @@ export default function CourseSearch({
     }
     runInitialSubjects();
   }, [termCode]);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function poll() {
-      try {
-        const res = await getHealth();
-        if (cancelled) return;
-        setHealth(res?.data || { aurora_status: "up" });
-      } catch {
-        // ignore (keep previous)
-      }
-    }
-    poll();
-    const id = setInterval(poll, 10000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
 
   const { data: courses, loading, error, isStale, cachedAt } = useCourses(subject, termCode);
 
@@ -432,23 +411,11 @@ export default function CourseSearch({
       <StaleBanner isStale={isStale} cachedAtMinutesAgo={cachedAtMinutesAgo} />
 
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex items-start justify-between gap-4">
+        <div>
           <div>
             <div className="font-heading text-3xl">Course Search</div>
             <div className="text-sm text-slate-600 mt-1">
               Live seats from Aurora, with fallback when Aurora is down.
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div
-              className={`h-3 w-3 rounded-full ${
-                health.aurora_status === "up" ? "bg-green-500" : "bg-red-500"
-              }`}
-              title={`Aurora: ${health.aurora_status}`}
-            />
-            <div className="text-xs text-slate-600">
-              {health.latency_ms != null ? `${health.latency_ms} ms` : ""}
             </div>
           </div>
         </div>
