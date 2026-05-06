@@ -36,6 +36,15 @@ function getCourseLabel(course) {
   return section ? `${code} Section ${section}` : code;
 }
 
+function getCourseIdentity(course) {
+  const crn = pickFirst(course, ["courseReferenceNumber", "crn"]);
+  if (crn) return `crn:${crn}`;
+  const subject = pickFirst(course, ["subjectCode", "subject", "subj", "courseCode"], "course");
+  const number = pickFirst(course, ["courseNumber", "courseNbr", "courseNum", "catalogNumber"], "");
+  const section = pickFirst(course, ["section", "classSection", "enrollmentSection", "sequenceNumber"], "");
+  return `${subject}-${number}-${section}`;
+}
+
 function listMeetingSlots(course) {
   const slots = [];
   const mf = Array.isArray(course?.meetingsFaculty) ? course.meetingsFaculty : [];
@@ -73,15 +82,18 @@ export default function App() {
   const [activePlannerTerm, setActivePlannerTerm] = useState("fall");
   const [plannerByTerm, setPlannerByTerm] = useState({ fall: [], winter: [] });
   const [plannerMessage, setPlannerMessage] = useState("");
+  const [plannerIdSeed, setPlannerIdSeed] = useState(1);
 
   function addCourseToPlanner(course, termKey) {
     const key = termKey === "winter" ? "winter" : "fall";
-    const courseId = course?.courseReferenceNumber || course?.crn;
-    if (!courseId) return;
+    const courseIdentity = getCourseIdentity(course);
+    if (!courseIdentity) return;
+    const nextPlannerId = `${key}-${plannerIdSeed}-${Date.now()}`;
+    setPlannerIdSeed((prev) => prev + 1);
 
     setPlannerByTerm((prev) => {
       const existing = prev[key] || [];
-      if (existing.some((item) => (item.courseReferenceNumber || item.crn) === courseId)) {
+      if (existing.some((item) => getCourseIdentity(item) === courseIdentity)) {
         setPlannerMessage(`${getCourseLabel(course)} is already in your ${key} planner.`);
         return prev;
       }
@@ -95,17 +107,18 @@ export default function App() {
       }
 
       setPlannerMessage("");
-      return { ...prev, [key]: [...existing, course] };
+      const plannerCourse = { ...course, _plannerId: nextPlannerId };
+      return { ...prev, [key]: [...existing, plannerCourse] };
     });
 
     setActivePlannerTerm(key);
   }
 
-  function removeCourseFromPlanner(termKey, courseId) {
+  function removeCourseFromPlanner(termKey, plannerCourseId) {
     setPlannerByTerm((prev) => ({
       ...prev,
       [termKey]: (prev[termKey] || []).filter(
-        (item) => (item.courseReferenceNumber || item.crn) !== courseId
+        (item) => item?._plannerId !== plannerCourseId
       ),
     }));
     setPlannerMessage("");
