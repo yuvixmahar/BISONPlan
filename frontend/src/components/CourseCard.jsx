@@ -70,7 +70,7 @@ function splitSectionInfo(rawText) {
   return { main, sectionInfo };
 }
 
-export default function CourseCard({ course, termCode, onQuickView }) {
+export default function CourseCard({ course, termCode, onQuickView, onAddToPlanner }) {
   const [expanded, setExpanded] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailLoaded, setDetailLoaded] = useState(false);
@@ -200,6 +200,17 @@ export default function CourseCard({ course, termCode, onQuickView }) {
             seatsCapacity={seatsCapacity}
             waitlistCapacity={waitlistCapacity}
           />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onAddToPlanner?.(course);
+            }}
+            className="mt-2 w-full text-[11px] px-2 py-1 rounded border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800"
+          >
+            Add to Planner
+          </button>
           <button
             type="button"
             onClick={(e) => {
