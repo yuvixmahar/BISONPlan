@@ -59,6 +59,7 @@ function inTimeWindow(course, timeFilter) {
 }
 
 export default function CourseSearch({
+  isActive = true,
   onAddToPlanner,
   plannerMessage,
   onClearPlannerMessage,
@@ -94,6 +95,13 @@ export default function CourseSearch({
   const [timeFilter, setTimeFilter] = useState("any");
   const [instructorFilter, setInstructorFilter] = useState("");
   const [quickViewCourse, setQuickViewCourse] = useState(null);
+
+  useEffect(() => {
+    if (isActive) return;
+    setTermMenuOpen(false);
+    setSubjectMenuOpen(false);
+    setQuickViewCourse(null);
+  }, [isActive]);
 
   useEffect(() => {
     async function runInitialTerms() {

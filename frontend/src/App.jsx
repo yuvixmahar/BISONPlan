@@ -132,6 +132,7 @@ export default function App() {
           <nav className="inline-flex rounded-lg border border-slate-200 p-1">
             <button
               type="button"
+              aria-current={page === "search" ? "page" : undefined}
               onClick={() => setPage("search")}
               className={`px-3 py-1.5 text-sm rounded-md ${
                 page === "search" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
@@ -141,6 +142,7 @@ export default function App() {
             </button>
             <button
               type="button"
+              aria-current={page === "planner" ? "page" : undefined}
               onClick={() => setPage("planner")}
               className={`px-3 py-1.5 text-sm rounded-md ${
                 page === "planner" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
@@ -152,22 +154,22 @@ export default function App() {
         </div>
       </header>
 
-      {page === "search" ? (
+      <div hidden={page !== "search"}>
         <CourseSearch
+          isActive={page === "search"}
           onAddToPlanner={addCourseToPlanner}
           plannerMessage={plannerMessage}
           onClearPlannerMessage={() => setPlannerMessage("")}
         />
-      ) : (
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <WeeklyPlanner
-            activePlannerTerm={activePlannerTerm}
-            setActivePlannerTerm={setActivePlannerTerm}
-            plannerByTerm={plannerByTerm}
-            onRemoveCourse={removeCourseFromPlanner}
-          />
-        </div>
-      )}
+      </div>
+      <div hidden={page !== "planner"} className="max-w-6xl mx-auto px-4 py-6">
+        <WeeklyPlanner
+          activePlannerTerm={activePlannerTerm}
+          setActivePlannerTerm={setActivePlannerTerm}
+          plannerByTerm={plannerByTerm}
+          onRemoveCourse={removeCourseFromPlanner}
+        />
+      </div>
     </div>
   );
 }
