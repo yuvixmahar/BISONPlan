@@ -5,6 +5,34 @@ export function pickFirst(obj, keys, fallback = "") {
   return fallback;
 }
 
+const SECTION_KEYS = [
+  "sequenceNumber",
+  "section",
+  "classSection",
+  "enrollmentSection",
+  "courseSection",
+  "sectionNumber",
+  "sequence",
+];
+
+export function getCourseSection(course) {
+  return pickFirst(course, SECTION_KEYS, "");
+}
+
+export function getCourseCode(course) {
+  const subject = pickFirst(course, ["subjectCode", "subject", "subj"]);
+  const number = pickFirst(course, ["courseNumber", "courseNbr", "courseNum", "catalogNumber"]);
+  if (subject && number) return `${subject} ${number}`.trim();
+  return pickFirst(course, ["courseCode", "subjectDescription"], "Course");
+}
+
+/** Course code plus section (e.g. "COMP 1010 · A01") for labels and toasts. */
+export function getCourseDisplayLabel(course) {
+  const code = getCourseCode(course);
+  const section = getCourseSection(course);
+  return section ? `${code} · ${section}` : code;
+}
+
 function formatFacultyName(faculty) {
   if (!faculty) return "";
   if (Array.isArray(faculty)) {

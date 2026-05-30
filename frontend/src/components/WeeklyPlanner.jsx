@@ -17,10 +17,12 @@ import {
   startOfDay,
 } from "../utils/planner.js";
 
-const START_MINUTES = 8 * 60;
-const END_MINUTES = 22 * 60;
-const TOTAL_MINUTES = END_MINUTES - START_MINUTES;
-const GRID_HEIGHT_PX = 1180;
+const DEFAULT_START_MINUTES = 8 * 60;
+const DEFAULT_END_MINUTES = 22 * 60;
+const EVENT_GAP_PX = 2;
+const GRID_HEIGHT_CLASS = "h-[min(calc(100vh-13rem),40rem)] min-h-72";
+const GRID_LAYOUT_CLASS =
+  "min-w-[940px] grid grid-cols-[72px_repeat(7,minmax(128px,1fr))] gap-2";
 
 function toDateKey(date) {
   const y = date.getFullYear();
@@ -169,6 +171,97 @@ function CourseChip({ course, termKey, onRemoveCourse }) {
   );
 }
 
+function roundDownToHour(minutes) {
+  return Math.floor(minutes / 60) * 60;
+}
+
+function roundUpToHour(minutes) {
+  return Math.ceil(minutes / 60) * 60;
+}
+
+function getTimeRangeForEvents(events) {
+  if (!events.length) {
+    return {
+      startMinutes: DEFAULT_START_MINUTES,
+      endMinutes: DEFAULT_END_MINUTES,
+      totalMinutes: DEFAULT_END_MINUTES - DEFAULT_START_MINUTES,
+    };
+  }
+
+  let minStart = Math.min(...events.map((ev) => ev.start));
+  let maxEnd = Math.max(...events.map((ev) => ev.end));
+
+  minStart = roundDownToHour(Math.max(DEFAULT_START_MINUTES, minStart - 15));
+  maxEnd = roundUpToHour(Math.min(DEFAULT_END_MINUTES, maxEnd + 15));
+
+  if (maxEnd <= minStart) {
+    maxEnd = minStart + 60;
+  }
+
+  return {
+    startMinutes: minStart,
+    endMinutes: maxEnd,
+    totalMinutes: maxEnd - minStart,
+  };
+}
+
+function eventsOverlap(a, b) {
+  return a.start < b.end && b.start < a.end;
+}
+
+/** Assign side-by-side columns for concurrent classes; back-to-back classes share a column. */
+function layoutDayEvents(dayEvents) {
+  if (!dayEvents.length) return [];
+
+  const sorted = [...dayEvents].sort((a, b) => a.start - b.start || a.end - b.end);
+  const clusters = [];
+  let cluster = [];
+  let clusterEnd = -1;
+
+  for (const ev of sorted) {
+    if (!cluster.length || ev.start < clusterEnd) {
+      cluster.push(ev);
+      clusterEnd = Math.max(clusterEnd, ev.end);
+    } else {
+      clusters.push(cluster);
+      cluster = [ev];
+      clusterEnd = ev.end;
+    }
+  }
+  if (cluster.length) clusters.push(cluster);
+
+  const laidOut = [];
+
+  for (const group of clusters) {
+    const columns = [];
+
+    for (const ev of group) {
+      let placedColumn = -1;
+      for (let col = 0; col < columns.length; col += 1) {
+        const hasOverlap = columns[col].some((other) => eventsOverlap(other, ev));
+        if (!hasOverlap) {
+          placedColumn = col;
+          break;
+        }
+      }
+      if (placedColumn === -1) {
+        placedColumn = columns.length;
+        columns.push([]);
+      }
+      columns[placedColumn].push(ev);
+    }
+
+    const totalColumns = columns.length;
+    for (let col = 0; col < columns.length; col += 1) {
+      for (const ev of columns[col]) {
+        laidOut.push({ ev, column: col, totalColumns });
+      }
+    }
+  }
+
+  return laidOut;
+}
+
 function WeekNavigator({ weekLabel, weekNumber, totalWeeks, onPrevious, onNext }) {
   const atStart = weekNumber <= 1;
   const atEnd = weekNumber >= totalWeeks;
@@ -208,6 +301,24 @@ function WeekNavigator({ weekLabel, weekNumber, totalWeeks, onPrevious, onNext }
 function WeeklyScheduleGrid({ weekStart, events }) {
   const weekDays = useMemo(() => buildWeekDays(weekStart), [weekStart]);
 
+  const weekVisibleEvents = useMemo(() => {
+    const list = [];
+    for (const dayDate of weekDays) {
+      const dayKey = getDayKeyFromDate(dayDate);
+      for (const ev of events) {
+        if (ev.dayKey === dayKey && dateWithinRange(dayDate, ev.rangeStart, ev.rangeEnd)) {
+          list.push(ev);
+        }
+      }
+    }
+    return list;
+  }, [events, weekDays]);
+
+  const timeRange = useMemo(
+    () => getTimeRangeForEvents(weekVisibleEvents),
+    [weekVisibleEvents]
+  );
+
   const eventsByDateKey = useMemo(() => {
     const map = new Map();
     for (const dayDate of weekDays) {
@@ -220,20 +331,35 @@ function WeeklyScheduleGrid({ weekStart, events }) {
             dateWithinRange(dayDate, ev.rangeStart, ev.rangeEnd)
         )
         .sort((a, b) => a.start - b.start);
-      map.set(dateKey, { dayDate, dayEvents });
+      map.set(dateKey, {
+        dayDate,
+        dayEvents,
+        layout: layoutDayEvents(dayEvents),
+      });
     }
     return map;
   }, [events, weekDays]);
 
   const hours = useMemo(() => {
     const result = [];
-    for (let t = START_MINUTES; t <= END_MINUTES; t += 60) result.push(t);
+    for (
+      let t = timeRange.startMinutes;
+      t <= timeRange.endMinutes;
+      t += 60
+    ) {
+      result.push(t);
+    }
     return result;
-  }, []);
+  }, [timeRange.startMinutes, timeRange.endMinutes]);
 
-  const hasAnyEvents = [...eventsByDateKey.values()].some(
-    ({ dayEvents }) => dayEvents.length > 0
-  );
+  const hasAnyEvents = weekVisibleEvents.length > 0;
+
+  const eventPosition = (ev) => {
+    const { startMinutes, totalMinutes } = timeRange;
+    const topPct = ((ev.start - startMinutes) / totalMinutes) * 100;
+    const heightPct = ((ev.end - ev.start) / totalMinutes) * 100;
+    return { topPct, heightPct, durationMinutes: ev.end - ev.start };
+  };
 
   return (
     <div className="space-y-3">
@@ -244,7 +370,7 @@ function WeeklyScheduleGrid({ weekStart, events }) {
       ) : null}
 
       <div className="overflow-x-auto">
-        <div className="min-w-[860px] grid grid-cols-[70px_repeat(7,minmax(110px,1fr))] gap-2">
+        <div className={GRID_LAYOUT_CLASS}>
           <div />
           {weekDays.map((dayDate) => {
             const { dayLabel, dateLabel } = formatDayHeader(dayDate);
@@ -268,12 +394,14 @@ function WeeklyScheduleGrid({ weekStart, events }) {
             );
           })}
 
-          <div className="relative" style={{ height: `${GRID_HEIGHT_PX}px` }}>
+          <div className={`relative ${GRID_HEIGHT_CLASS}`}>
             {hours.map((minute) => (
               <div
                 key={minute}
                 className="absolute text-[10px] text-slate-500 -translate-y-1/2"
-                style={{ top: `${((minute - START_MINUTES) / TOTAL_MINUTES) * 100}%` }}
+                style={{
+                  top: `${((minute - timeRange.startMinutes) / timeRange.totalMinutes) * 100}%`,
+                }}
               >
                 {toTimeLabel(minute)}
               </div>
@@ -282,7 +410,7 @@ function WeeklyScheduleGrid({ weekStart, events }) {
 
           {weekDays.map((dayDate) => {
             const dateKey = toDateKey(dayDate);
-            const { dayEvents } = eventsByDateKey.get(dateKey) || { dayEvents: [] };
+            const { layout } = eventsByDateKey.get(dateKey) || { layout: [] };
             const dayKey = getDayKeyFromDate(dayDate);
             const hasPossibleClass = events.some(
               (ev) =>
@@ -292,52 +420,58 @@ function WeeklyScheduleGrid({ weekStart, events }) {
             return (
               <div
                 key={`grid-${dateKey}`}
-                className={`relative rounded-lg border ${
+                className={`relative rounded-lg border ${GRID_HEIGHT_CLASS} ${
                   hasPossibleClass
                     ? "border-slate-200 bg-slate-50/40"
                     : "border-slate-100 bg-slate-50/20"
                 }`}
-                style={{ height: `${GRID_HEIGHT_PX}px` }}
               >
                 {hours.map((minute) => (
                   <div
                     key={`${dateKey}-${minute}`}
                     className="absolute left-0 right-0 border-t border-slate-200/80"
-                    style={{ top: `${((minute - START_MINUTES) / TOTAL_MINUTES) * 100}%` }}
+                    style={{
+                      top: `${((minute - timeRange.startMinutes) / timeRange.totalMinutes) * 100}%`,
+                    }}
                   />
                 ))}
-                {dayEvents.map((ev) => {
-                  const topPct = ((ev.start - START_MINUTES) / TOTAL_MINUTES) * 100;
-                  const heightPct = ((ev.end - ev.start) / TOTAL_MINUTES) * 100;
-                  const durationMinutes = ev.end - ev.start;
-                  const showWrappedLocation = durationMinutes >= 120;
+                {layout.map(({ ev, column, totalColumns }) => {
+                  const { topPct, heightPct } = eventPosition(ev);
                   const { dayLabel } = formatDayHeader(dayDate);
+                  const widthPct = 100 / totalColumns;
+                  const leftPct = column * widthPct;
 
                   return (
                     <div
                       key={ev.id}
-                      className="absolute left-1 right-1 rounded-md border border-blue-200 bg-blue-100 px-2 py-1.5 text-[11px] leading-tight text-blue-950 shadow-sm overflow-hidden"
+                      className="absolute rounded-md border border-blue-200 bg-blue-100 text-blue-950 shadow-sm overflow-hidden box-border px-2 py-1.5 text-[11px] leading-[1.35]"
                       style={{
-                        top: `${topPct}%`,
-                        height: `${Math.max(heightPct, 4)}%`,
+                        top: `calc(${topPct}% + ${EVENT_GAP_PX / 2}px)`,
+                        height: `calc(${heightPct}% - ${EVENT_GAP_PX}px)`,
+                        left: `calc(${leftPct}% + 3px)`,
+                        width: `calc(${widthPct}% - 6px)`,
                       }}
-                      title={`${ev.code} ${ev.section} (${dayLabel})`}
+                      title={[
+                        `${ev.code}${ev.section ? ` ${ev.section}` : ""}`,
+                        `${toTimeLabel(ev.start)} – ${toTimeLabel(ev.end)}`,
+                        ev.sectionType,
+                        ev.location,
+                        ev.instructor,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     >
-                      <div className="font-semibold truncate">
-                        {ev.code} {ev.section || "TBA"}
+                      <div className="font-semibold wrap-break-word">
+                        {ev.code}
+                        {ev.section ? ` ${ev.section}` : ""}
                       </div>
-                      {ev.instructor ? (
-                        <div className="truncate text-blue-900/80">{ev.instructor}</div>
-                      ) : null}
-                      <div className="truncate">{ev.sectionType}</div>
-                      <div className="truncate">
-                        {toTimeLabel(ev.start)} - {toTimeLabel(ev.end)}
+                      <div className="wrap-break-word text-blue-900/90 text-[10px]">
+                        {toTimeLabel(ev.start)} – {toTimeLabel(ev.end)}
                       </div>
-                      {showWrappedLocation ? (
-                        <div className="mt-0.5 wrap-break-word whitespace-normal">{ev.location}</div>
-                      ) : (
-                        <div className="truncate">{ev.location}</div>
-                      )}
+                      <div className="wrap-break-word text-blue-900 font-medium mt-0.5">
+                        {ev.sectionType}
+                      </div>
+                      <div className="wrap-break-word text-blue-900/80 mt-0.5">{ev.location}</div>
                     </div>
                   );
                 })}
