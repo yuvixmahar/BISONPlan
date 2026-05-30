@@ -1,10 +1,21 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
+export const TOAST_DURATION_MS = 2500;
+
 const TONE_STYLES = {
-  success: "bg-emerald-50 border-emerald-200 text-emerald-900",
-  warning: "bg-amber-50 border-amber-200 text-amber-900",
-  error: "bg-red-50 border-red-200 text-red-900",
+  success: {
+    panel: "bg-emerald-50 border-emerald-200 text-emerald-900",
+    bar: "bg-emerald-500",
+  },
+  warning: {
+    panel: "bg-amber-50 border-amber-200 text-amber-900",
+    bar: "bg-amber-500",
+  },
+  error: {
+    panel: "bg-red-50 border-red-200 text-red-900",
+    bar: "bg-red-500",
+  },
 };
 
 export default function PlannerToast({ notice, onDismiss }) {
@@ -13,31 +24,38 @@ export default function PlannerToast({ notice, onDismiss }) {
 
   useEffect(() => {
     if (!notice) return undefined;
-    const timer = setTimeout(() => onDismissRef.current(), 4500);
+    const timer = setTimeout(() => onDismissRef.current(), TOAST_DURATION_MS);
     return () => clearTimeout(timer);
   }, [notice]);
 
   if (!notice) return null;
 
+  const styles = TONE_STYLES[notice.tone] || TONE_STYLES.success;
+
   return createPortal(
     <div
-      className="fixed bottom-4 left-1/2 z-[100] w-[min(92vw,28rem)] -translate-x-1/2 pointer-events-auto"
+      className="fixed bottom-4 left-1/2 z-100 w-[min(92vw,28rem)] -translate-x-1/2 pointer-events-auto"
       role="status"
       aria-live="polite"
     >
-      <div
-        className={`rounded-lg border px-4 py-3 shadow-xl flex items-start justify-between gap-3 ${
-          TONE_STYLES[notice.tone] || TONE_STYLES.success
-        }`}
-      >
-        <span className="text-sm font-medium">{notice.message}</span>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="text-xs px-2 py-1 rounded border border-current/20 hover:bg-white/40 shrink-0"
-        >
-          Dismiss
-        </button>
+      <div className={`rounded-lg border shadow-xl overflow-hidden ${styles.panel}`}>
+        <div className="px-4 py-3 flex items-start justify-between gap-3">
+          <span className="text-sm font-medium">{notice.message}</span>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="text-xs px-2 py-1 rounded border border-current/20 hover:bg-white/40 shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+        <div className="h-1 bg-black/5" aria-hidden="true">
+          <div
+            key={notice.id ?? notice.message}
+            className={`h-full toast-countdown-bar ${styles.bar}`}
+            style={{ animationDuration: `${TOAST_DURATION_MS}ms` }}
+          />
+        </div>
       </div>
     </div>,
     document.body

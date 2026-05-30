@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import CourseSearch from "./pages/CourseSearch.jsx";
 import WeeklyPlanner from "./components/WeeklyPlanner.jsx";
 import PlannerToast from "./components/PlannerToast.jsx";
+import { getCourseDisplayLabel } from "./utils/course.js";
 import {
   dateRangesOverlap,
   getCourseDateRange,
@@ -33,14 +34,6 @@ function toMinutes(hhmm) {
   const mm = Number(raw.slice(2));
   if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
   return hh * 60 + mm;
-}
-
-function getCourseLabel(course) {
-  const subject = pickFirst(course, ["subjectCode", "subject", "subj"]);
-  const number = pickFirst(course, ["courseNumber", "courseNbr", "courseNum", "catalogNumber"]);
-  const section = pickFirst(course, ["section", "classSection", "enrollmentSection"]);
-  const code = subject && number ? `${subject} ${number}` : "Course";
-  return section ? `${code} Section ${section}` : code;
 }
 
 function getCourseIdentity(course) {
@@ -115,8 +108,9 @@ export default function App() {
       const existing = prev[key] || [];
       if (existing.some((item) => getCourseIdentity(item) === courseIdentity)) {
         setPlannerNotice({
+          id: Date.now(),
           tone: "warning",
-          message: `${getCourseLabel(course)} is already in your ${getTermLabel(key)} planner.`,
+          message: `${getCourseDisplayLabel(course)} is already in your ${getTermLabel(key)} planner.`,
         });
         return prev;
       }
@@ -124,16 +118,18 @@ export default function App() {
       const conflictCourse = firstConflict(existing, course, key);
       if (conflictCourse) {
         setPlannerNotice({
+          id: Date.now(),
           tone: "error",
-          message: `Conflict blocked: ${getCourseLabel(course)} overlaps with ${getCourseLabel(conflictCourse)} in ${getTermLabel(key)}.`,
+          message: `Conflict blocked: ${getCourseDisplayLabel(course)} overlaps with ${getCourseDisplayLabel(conflictCourse)} in ${getTermLabel(key)}.`,
         });
         return prev;
       }
 
       const plannerCourse = { ...course, _plannerId: nextPlannerId };
       setPlannerNotice({
+        id: Date.now(),
         tone: "success",
-        message: `${getCourseLabel(course)} added to ${getTermLabel(key)} planner.`,
+        message: `${getCourseDisplayLabel(course)} added to ${getTermLabel(key)} planner.`,
       });
       setActivePlannerTerm(key);
       return { ...prev, [key]: [...existing, plannerCourse] };
