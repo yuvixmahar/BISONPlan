@@ -1,15 +1,29 @@
 ## BISONplan
 
-BISONplan is a faster, cleaner course planning experience for University of Manitoba students.
-It works as a live proxy/enhancement layer over Aurora (Banner SSB), not a mirrored course database.
+BISONplan is a faster, cleaner course planning experience for University of Manitoba students. It sits on top of Aurora (Banner SSB) as a live proxy and enhancement layer — not a mirrored or stale course database. Every search hits Aurora directly, so seat counts, waitlists, and section details stay current.
 
-## What It Does
+Built for students who want to explore courses, compare sections, and sketch out a schedule without fighting Aurora’s UI.
 
-- Browse terms and departments with Aurora-style paginated dropdowns.
-- Search and filter course sections with live seat availability.
-- Load course lists fast (details fetched lazily when needed).
-- Open a Quick View drawer for meeting details, dates, and requisites.
-- Show prerequisite/corequisite text in Aurora wording to avoid misinformation.
+## Features
+
+### Course Search
+
+- **Live Aurora data** — terms, departments, sections, and seats are fetched in real time from U of M registration.
+- **Term and subject pickers** — paginated dropdowns with search, matching Aurora’s lookup behavior.
+- **Rich filtering** — narrow by credits, campus, delivery mode, schedule type, day of week, time of day, and instructor; toggle full classes and waitlist-only sections.
+- **Text search** — filter the loaded section list by course code, title, or instructor.
+- **Seat badges** — open, waitlist, and full status at a glance.
+- **Quick View drawer** — meeting times, locations, instructors, dates, and section notes without leaving the list.
+- **Prerequisites and corequisites** — loaded on demand in Aurora’s own wording to avoid misinformation.
+- **Stale-data banner** — if Aurora is slow or unreachable, cached results are shown with a clear freshness indicator.
+
+### Weekly Planner
+
+- **Add from search** — send any section to your Fall, Winter, or Summer planner in one click.
+- **Weekly grid** — visualize meeting blocks on a Mon–Sun timetable (8 AM–10 PM).
+- **Conflict detection** — overlapping meeting times are blocked before a course is added; summer terms also respect non-overlapping date ranges.
+- **Summer timeline** — summer courses with different start/end dates are grouped and shown on a date timeline above the grid.
+- **Per-term planners** — keep separate draft schedules for Fall, Winter, and Summer.
 
 ## Tech Stack
 
@@ -19,53 +33,16 @@ It works as a live proxy/enhancement layer over Aurora (Banner SSB), not a mirro
 - **Frontend package manager:** npm
 - **Caching:** in-memory TTL cache for live Aurora-backed responses
 
-## Project Structure
-
-```text
-bisonplan/
-├── backend/
-│   ├── main.py
-│   ├── config.py
-│   ├── database.py
-│   ├── cache.py
-│   ├── routers/
-│   ├── services/
-│   ├── models/
-│   ├── schemas/
-│   └── utils/
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   ├── index.html
-│   ├── package.json
-│   └── vite.config.js
-├── .env
-├── .gitignore
-├── pyproject.toml
-└── README.md
-```
-
 ## Local Setup
 
-### 1) Configure environment
-
-Create `.env` in the repo root:
-
-```env
-AURORA_BIGIP_COOKIE=
-AURORA_CF_CLEARANCE=
-AURORA_JSESSIONID=
-AURORA_TS_COOKIE=
-```
-
-### 2) Backend
+### Backend
 
 ```bash
 uv sync
 python -m uvicorn backend.main:app --reload --port 8000
 ```
 
-### 3) Frontend
+### Frontend
 
 ```bash
 cd frontend
@@ -75,16 +52,4 @@ npm run dev
 
 Frontend runs on `http://localhost:5173`, backend on `http://localhost:8000`.
 
-## API Overview
-
-- `GET /api/health` — Aurora connectivity status + latency
-- `GET /api/terms` — paginated term lookup (`offset`, `max`, `searchTerm`)
-- `GET /api/subjects` — paginated typeahead subject lookup
-- `GET /api/courses` — course sections for subject/term (fast list mode by default)
-- `GET /api/courses/{crn}/description` — detailed description + requisites for one section
-
-## Notes
-
-- Aurora session initialization (`getTerms` then `term/search`) is required before search results.
-- Seat data is always live from Aurora endpoints.
-- Cookies expire and must be refreshed in `.env` periodically.
+No environment file or cookie configuration is required — Aurora endpoints are called directly.

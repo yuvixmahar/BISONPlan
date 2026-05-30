@@ -16,11 +16,6 @@ htmlcov/
 venv/
 .python-version
 
-# Env vars (Aurora cookies)
-.env
-.env.*
-!.env.example
-
 # Node / frontend artifacts
 node_modules/
 *.log
