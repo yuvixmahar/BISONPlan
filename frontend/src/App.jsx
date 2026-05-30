@@ -1,6 +1,11 @@
 import { useState } from "react";
 import CourseSearch from "./pages/CourseSearch.jsx";
 import WeeklyPlanner from "./components/WeeklyPlanner.jsx";
+import {
+  dateRangesOverlap,
+  getCourseDateRange,
+  normalizePlannerTerm,
+} from "./utils/planner.js";
 
 const DAYS = [
   "monday",
@@ -61,10 +66,19 @@ function listMeetingSlots(course) {
   return slots;
 }
 
-function firstConflict(existingCourses, nextCourse) {
+function firstConflict(existingCourses, nextCourse, termKey) {
   const nextSlots = listMeetingSlots(nextCourse);
   if (!nextSlots.length) return null;
+  const nextDateRange = getCourseDateRange(nextCourse);
+
   for (const existing of existingCourses) {
+    if (
+      termKey === "summer" &&
+      !dateRangesOverlap(getCourseDateRange(existing), nextDateRange)
+    ) {
+      continue;
+    }
+
     const existingSlots = listMeetingSlots(existing);
     for (const a of nextSlots) {
       for (const b of existingSlots) {
@@ -80,12 +94,12 @@ function firstConflict(existingCourses, nextCourse) {
 export default function App() {
   const [page, setPage] = useState("search");
   const [activePlannerTerm, setActivePlannerTerm] = useState("fall");
-  const [plannerByTerm, setPlannerByTerm] = useState({ fall: [], winter: [] });
+  const [plannerByTerm, setPlannerByTerm] = useState({ fall: [], winter: [], summer: [] });
   const [plannerMessage, setPlannerMessage] = useState("");
   const [plannerIdSeed, setPlannerIdSeed] = useState(1);
 
   function addCourseToPlanner(course, termKey) {
-    const key = termKey === "winter" ? "winter" : "fall";
+    const key = normalizePlannerTerm(termKey);
     const courseIdentity = getCourseIdentity(course);
     if (!courseIdentity) return;
     const nextPlannerId = `${key}-${plannerIdSeed}-${Date.now()}`;
@@ -98,7 +112,7 @@ export default function App() {
         return prev;
       }
 
-      const conflictCourse = firstConflict(existing, course);
+      const conflictCourse = firstConflict(existing, course, key);
       if (conflictCourse) {
         setPlannerMessage(
           `Conflict blocked: ${getCourseLabel(course)} overlaps with ${getCourseLabel(conflictCourse)} in ${key}.`
