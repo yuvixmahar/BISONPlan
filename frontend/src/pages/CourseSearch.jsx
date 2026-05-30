@@ -7,6 +7,7 @@ import SearchBar from "../components/SearchBar.jsx";
 import CourseList from "../components/CourseList.jsx";
 import StaleBanner from "../components/StaleBanner.jsx";
 import QuickViewDrawer from "../components/QuickViewDrawer.jsx";
+import { plannerTermFromTermDescription } from "../utils/planner.js";
 
 function toMinutesAgo(cachedAtSeconds) {
   if (!cachedAtSeconds) return null;
@@ -400,9 +401,7 @@ export default function CourseSearch({
 
   function plannerTermFromSelection() {
     const selected = terms.find((t) => t.code === termCode)?.description || "";
-    if (/winter/i.test(selected)) return "winter";
-    if (/fall/i.test(selected)) return "fall";
-    return "fall";
+    return plannerTermFromTermDescription(selected);
   }
 
   function addCourseToPlanner(course) {
