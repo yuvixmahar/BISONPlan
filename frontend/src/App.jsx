@@ -4,87 +4,11 @@ import WeeklyPlanner from "./components/WeeklyPlanner.jsx";
 import PlannerToast from "./components/PlannerToast.jsx";
 import { getCourseDisplayLabel } from "./utils/course.js";
 import {
-  dateRangesOverlap,
-  getCourseDateRange,
+  findPlannerConflict,
+  getCourseIdentity,
   normalizePlannerTerm,
   PLANNER_TERMS,
 } from "./utils/planner.js";
-
-const DAYS = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-];
-
-function pickFirst(obj, keys, fallback = "") {
-  for (const k of keys) {
-    if (obj && obj[k] != null && obj[k] !== "") return obj[k];
-  }
-  return fallback;
-}
-
-function toMinutes(hhmm) {
-  const raw = String(hhmm || "").padStart(4, "0");
-  if (!/^\d{4}$/.test(raw)) return null;
-  const hh = Number(raw.slice(0, 2));
-  const mm = Number(raw.slice(2));
-  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
-  return hh * 60 + mm;
-}
-
-function getCourseIdentity(course) {
-  const crn = pickFirst(course, ["courseReferenceNumber", "crn"]);
-  if (crn) return `crn:${crn}`;
-  const subject = pickFirst(course, ["subjectCode", "subject", "subj", "courseCode"], "course");
-  const number = pickFirst(course, ["courseNumber", "courseNbr", "courseNum", "catalogNumber"], "");
-  const section = pickFirst(course, ["section", "classSection", "enrollmentSection", "sequenceNumber"], "");
-  return `${subject}-${number}-${section}`;
-}
-
-function listMeetingSlots(course) {
-  const slots = [];
-  const mf = Array.isArray(course?.meetingsFaculty) ? course.meetingsFaculty : [];
-  for (const item of mf) {
-    const mt = item?.meetingTime;
-    if (!mt) continue;
-    const start = toMinutes(mt.beginTime);
-    const end = toMinutes(mt.endTime);
-    if (start == null || end == null || end <= start) continue;
-    for (const day of DAYS) {
-      if (mt?.[day]) slots.push({ day, start, end });
-    }
-  }
-  return slots;
-}
-
-function firstConflict(existingCourses, nextCourse, termKey) {
-  const nextSlots = listMeetingSlots(nextCourse);
-  if (!nextSlots.length) return null;
-  const nextDateRange = getCourseDateRange(nextCourse);
-
-  for (const existing of existingCourses) {
-    if (
-      termKey === "summer" &&
-      !dateRangesOverlap(getCourseDateRange(existing), nextDateRange)
-    ) {
-      continue;
-    }
-
-    const existingSlots = listMeetingSlots(existing);
-    for (const a of nextSlots) {
-      for (const b of existingSlots) {
-        if (a.day !== b.day) continue;
-        const overlaps = a.start < b.end && b.start < a.end;
-        if (overlaps) return existing;
-      }
-    }
-  }
-  return null;
-}
 
 function getTermLabel(termKey) {
   return PLANNER_TERMS.find((term) => term.key === termKey)?.label || termKey;
@@ -115,7 +39,7 @@ export default function App() {
         return prev;
       }
 
-      const conflictCourse = firstConflict(existing, course, key);
+      const conflictCourse = findPlannerConflict(existing, course, key);
       if (conflictCourse) {
         setPlannerNotice({
           id: Date.now(),
@@ -196,4 +120,3 @@ export default function App() {
     </div>
   );
 }
-

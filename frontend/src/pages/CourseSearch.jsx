@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getInstructorName } from "../utils/course.js";
+import { getCourseCode, getInstructorName } from "../utils/course.js";
+import { hasDay, inTimeWindow } from "../utils/courseFilters.js";
 import { getSubjects, getTerms } from "../api/client.js";
 import useCourses from "../hooks/useCourses.js";
 import FilterPanel from "../components/FilterPanel.jsx";
@@ -15,49 +16,6 @@ function toMinutesAgo(cachedAtSeconds) {
   const diffSeconds = nowSeconds - cachedAtSeconds;
   if (!Number.isFinite(diffSeconds) || diffSeconds < 0) return null;
   return Math.max(0, Math.round(diffSeconds / 60));
-}
-
-function courseCode(course) {
-  const subject = course.subjectCode || course.subject || course.subj || course.subjectDescription;
-  const num = course.courseNumber || course.courseNbr || course.courseNum || course.catalogNbr;
-  if (subject && num) return `${subject} ${num}`.trim();
-  return course.courseCode || "";
-}
-
-function getMeetingTimes(course) {
-  const mf = Array.isArray(course?.meetingsFaculty) ? course.meetingsFaculty : [];
-  return mf.map((m) => m?.meetingTime).filter(Boolean);
-}
-
-function hasDay(course, dayCode) {
-  if (!dayCode || dayCode === "any") return true;
-  const dayMap = {
-    M: "monday",
-    T: "tuesday",
-    W: "wednesday",
-    R: "thursday",
-    F: "friday",
-    S: "saturday",
-    U: "sunday",
-  };
-  const key = dayMap[dayCode];
-  if (!key) return true;
-  return getMeetingTimes(course).some((mt) => Boolean(mt?.[key]));
-}
-
-function inTimeWindow(course, timeFilter) {
-  if (!timeFilter || timeFilter === "any") return true;
-  const beginTimes = getMeetingTimes(course)
-    .map((mt) => Number(mt?.beginTime ?? 0))
-    .filter((n) => Number.isFinite(n) && n > 0);
-  if (!beginTimes.length) return false;
-
-  return beginTimes.some((t) => {
-    if (timeFilter === "morning") return t < 1200;
-    if (timeFilter === "afternoon") return t >= 1200 && t < 1700;
-    if (timeFilter === "evening") return t >= 1700;
-    return true;
-  });
 }
 
 export default function CourseSearch({
@@ -365,7 +323,7 @@ export default function CourseSearch({
           if (!instructor.includes(instructorQ)) return false;
         }
         if (q) {
-          const hay = `${courseCode(c)} ${c.title || c.courseTitle || ""}`.toLowerCase();
+          const hay = `${getCourseCode(c, { fallback: "" })} ${c.title || c.courseTitle || ""}`.toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;

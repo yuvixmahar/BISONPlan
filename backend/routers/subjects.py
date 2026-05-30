@@ -1,13 +1,12 @@
-import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
 from ..services.aurora import fetch_subjects, init_term_session, make_client
+from ..utils.api_response import api_response
+from ..utils.aurora_data import normalize_subject_items
+from ..utils.errors import AURORA_ERRORS, aurora_unavailable_error
+from ..utils.pagination import paginated_page
 
 router = APIRouter()
-
-
-def _wrap(success: bool, source: str, cached_at: int | None, data):
-    return {"success": success, "source": source, "cached_at": cached_at, "data": data}
 
 
 @router.get("/subjects")
@@ -30,29 +29,10 @@ async def get_subjects(
                 unique_session_id=uniqueSessionId,
             )
 
-        normalized: list[dict[str, str]] = []
-        for item in page:
-            if not isinstance(item, dict):
-                continue
-            code = item.get("code")
-            if not code:
-                continue
-            description = item.get("description") or code
-            normalized.append({"code": str(code), "description": str(description)})
-
-        has_more = len(normalized) >= max
         data = {
-            "items": normalized,
-            "offset": offset,
-            "max": max,
+            **paginated_page(normalize_subject_items(page), offset, max),
             "searchTerm": searchTerm,
-            "has_more": has_more,
-            "next_offset": offset + 1 if has_more else None,
         }
-        return _wrap(True, "live", None, data)
-    except (httpx.HTTPStatusError, httpx.RequestError) as e:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Aurora is unreachable (error while fetching subjects): {type(e).__name__}",
-        )
-
+        return api_response(True, "live", None, data)
+    except AURORA_ERRORS as e:
+        raise aurora_unavailable_error("fetching subjects", e)

@@ -1,69 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { getCourseDescription } from "../api/client.js";
-import { getInstructorName, getMeetingsWithFaculty } from "../utils/course.js";
-
-function pickFirst(obj, keys, fallback = "") {
-  for (const k of keys) {
-    if (obj && obj[k] != null && obj[k] !== "") return obj[k];
-  }
-  return fallback;
-}
-
-function toAmPm(hhmm) {
-  if (!hhmm || String(hhmm).length < 3) return "";
-  const raw = String(hhmm).padStart(4, "0");
-  const hh = Number(raw.slice(0, 2));
-  const mm = raw.slice(2);
-  const suffix = hh >= 12 ? "PM" : "AM";
-  const twelve = hh % 12 === 0 ? 12 : hh % 12;
-  return `${twelve}:${mm} ${suffix}`;
-}
-
-function meetingDays(mt) {
-  const days = [
-    ["monday", "M"],
-    ["tuesday", "T"],
-    ["wednesday", "W"],
-    ["thursday", "R"],
-    ["friday", "F"],
-    ["saturday", "S"],
-    ["sunday", "U"],
-  ];
-  return days.filter(([k]) => Boolean(mt?.[k])).map(([, label]) => label);
-}
-
-function splitSectionInfo(rawText) {
-  const raw = (rawText || "").trim();
-  if (!raw) return { main: "", sectionInfo: "" };
-  const marker = /section information text\s*:/i;
-  const parts = raw.split(marker);
-  if (parts.length <= 1) return { main: raw, sectionInfo: "" };
-  const main = parts[0].trim().replace(/[.\s]+$/, "");
-  const sectionInfo = parts.slice(1).join(" ").trim();
-  return { main, sectionInfo };
-}
+import {
+  getCourseCode,
+  getCourseCrn,
+  getCourseSection,
+  getCourseTitle,
+  getInstructorName,
+  getMeetingDayLabels,
+  getMeetingsWithFaculty,
+  splitSectionInfo,
+} from "../utils/course.js";
+import { formatTimeRangeFromHhmm } from "../utils/time.js";
 
 export default function QuickViewDrawer({ open, course, termCode, onClose }) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
   const [detailData, setDetailData] = useState(null);
 
-  const code = useMemo(() => {
-    const subject = pickFirst(course, ["subjectCode", "subject", "subj"]);
-    const number = pickFirst(course, ["courseNumber", "courseNbr", "courseNum", "catalogNumber"]);
-    return subject && number ? `${subject} ${number}` : pickFirst(course, ["subjectDescription", "courseCode"], "");
-  }, [course]);
-
-  const title = useMemo(
-    () => pickFirst(course, ["title", "courseTitle", "subjectTitle"], "Course"),
-    [course]
-  );
-
-  const section = useMemo(
-    () => pickFirst(course, ["section", "classSection", "enrollmentSection"], ""),
-    [course]
-  );
-
+  const code = useMemo(() => getCourseCode(course, { fallback: "" }), [course]);
+  const title = useMemo(() => getCourseTitle(course), [course]);
+  const section = useMemo(() => getCourseSection(course), [course]);
   const instructor = useMemo(() => getInstructorName(course), [course]);
   const meetings = useMemo(() => getMeetingsWithFaculty(course), [course]);
   const prereqSplit = useMemo(
@@ -80,7 +36,7 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
 
   useEffect(() => {
     if (!open || !course || !termCode) return;
-    const crn = pickFirst(course, ["courseReferenceNumber", "crn"], "");
+    const crn = getCourseCrn(course);
     if (!crn) return;
 
     let cancelled = false;
@@ -138,8 +94,8 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
             ) : (
               <div className="space-y-3">
                 {meetings.map(({ meetingTime: mt, instructor: meetingInstructor }, idx) => {
-                  const days = meetingDays(mt).join(" ");
-                  const time = `${toAmPm(mt.beginTime)} - ${toAmPm(mt.endTime)}`.trim();
+                  const days = getMeetingDayLabels(mt).join(" ");
+                  const time = formatTimeRangeFromHhmm(mt.beginTime, mt.endTime);
                   const building = mt.buildingDescription || mt.building || "TBA";
                   const room = mt.room || "TBA";
                   const type = mt.meetingTypeDescription || mt.meetingType || "Class";
@@ -147,7 +103,9 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
                     <div key={`${idx}-${mt.beginTime}-${mt.endTime}`} className="border border-slate-200 rounded-lg p-3">
                       <div className="flex flex-wrap gap-2 text-xs mb-2">
                         {days ? <span className="px-2 py-1 rounded bg-slate-100">{days}</span> : null}
-                        {time.trim() !== "-" ? <span className="px-2 py-1 rounded bg-blue-50 text-blue-800">{time}</span> : null}
+                        {time.trim() !== "-" ? (
+                          <span className="px-2 py-1 rounded bg-blue-50 text-blue-800">{time}</span>
+                        ) : null}
                         <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-800">{type}</span>
                       </div>
                       <div className="text-sm text-slate-700">
@@ -155,7 +113,8 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
                         {meetingInstructor || instructor || "TBA"}
                       </div>
                       <div className="text-sm text-slate-700">
-                        <span className="font-medium">Location:</span> {building} {room !== "TBA" ? `• Room ${room}` : ""}
+                        <span className="font-medium">Location:</span> {building}{" "}
+                        {room !== "TBA" ? `• Room ${room}` : ""}
                       </div>
                       <div className="text-sm text-slate-700">
                         <span className="font-medium">Dates:</span> {mt.startDate || "?"} - {mt.endDate || "?"}
@@ -188,27 +147,19 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
               {prereqSplit.main ? (
                 <div className="mb-3">
                   <div className="text-xs font-semibold text-slate-600 mb-1">Prerequisites</div>
-                  <div className="text-sm text-slate-700 leading-relaxed">
-                    {prereqSplit.main}
-                  </div>
+                  <div className="text-sm text-slate-700 leading-relaxed">{prereqSplit.main}</div>
                 </div>
               ) : null}
               {coreqSplit.main ? (
                 <div>
                   <div className="text-xs font-semibold text-slate-600 mb-1">Corequisites</div>
-                  <div className="text-sm text-slate-700 leading-relaxed">
-                    {coreqSplit.main}
-                  </div>
+                  <div className="text-sm text-slate-700 leading-relaxed">{coreqSplit.main}</div>
                 </div>
               ) : null}
               {sectionInfoText ? (
                 <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs font-semibold text-slate-700 mb-1">
-                    Section Information
-                  </div>
-                  <div className="text-sm text-slate-700 leading-relaxed">
-                    {sectionInfoText}
-                  </div>
+                  <div className="text-xs font-semibold text-slate-700 mb-1">Section Information</div>
+                  <div className="text-sm text-slate-700 leading-relaxed">{sectionInfoText}</div>
                 </div>
               ) : null}
             </section>
@@ -218,4 +169,3 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
     </div>
   );
 }
-

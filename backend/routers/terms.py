@@ -1,13 +1,12 @@
-import httpx
 from fastapi import APIRouter, Query
 
 from ..services.aurora import fetch_terms, make_client
+from ..utils.api_response import api_response
+from ..utils.aurora_data import normalize_term_items
+from ..utils.errors import AURORA_ERRORS
+from ..utils.pagination import paginated_page
 
 router = APIRouter()
-
-
-def _wrap(success: bool, source: str, cached_at: int | None, data):
-    return {"success": success, "source": source, "cached_at": cached_at, "data": data}
 
 
 @router.get("/terms")
@@ -25,47 +24,16 @@ async def get_terms(
                 search_term=searchTerm,
             )
 
-        normalized: list[dict[str, str]] = []
-        for item in page or []:
-            if not isinstance(item, dict):
-                continue
-
-            term_code = item.get("termCode") or item.get("code") or item.get("term")
-            label = item.get("description") or item.get("name") or item.get("label")
-            if not term_code:
-                continue
-
-            normalized.append(
-                {
-                    "code": str(term_code),
-                    "description": str(label or str(term_code)),
-                }
-            )
-
-        has_more = len(normalized) >= max
-        return _wrap(
+        return api_response(
             True,
             "live",
             None,
-            {
-                "items": normalized,
-                "offset": offset,
-                "max": max,
-                "has_more": has_more,
-                "next_offset": offset + 1 if has_more else None,
-            },
+            paginated_page(normalize_term_items(page), offset, max),
         )
-    except (httpx.HTTPStatusError, httpx.RequestError):
-        return _wrap(
+    except AURORA_ERRORS:
+        return api_response(
             True,
             "stale",
             None,
-            {
-                "items": [],
-                "offset": offset,
-                "max": max,
-                "has_more": False,
-                "next_offset": None,
-            },
+            paginated_page([], offset, max),
         )
-
