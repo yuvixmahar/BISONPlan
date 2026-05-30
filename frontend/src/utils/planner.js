@@ -10,7 +10,12 @@ export function normalizePlannerTerm(termKey) {
   return "fall";
 }
 
-export function plannerTermFromTermDescription(description = "") {
+export function plannerTermFromTermDescription(description = "", termCode = "") {
+  const code = String(termCode || "");
+  if (/50$/.test(code)) return "summer";
+  if (/10$/.test(code)) return "winter";
+  if (/90$/.test(code)) return "fall";
+
   if (/winter/i.test(description)) return "winter";
   if (/summer/i.test(description)) return "summer";
   if (/fall/i.test(description)) return "fall";
@@ -93,6 +98,120 @@ export function dateRangesOverlap(a, b) {
   return a.start <= b.end && b.start <= a.end;
 }
 
+export function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return startOfDay(next);
+}
+
+export function getWeekStartMonday(date) {
+  const day = startOfDay(date);
+  const weekday = day.getDay();
+  const diff = weekday === 0 ? -6 : 1 - weekday;
+  return addDays(day, diff);
+}
+
+export function getDayKeyFromDate(date) {
+  const keys = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
+  return keys[date.getDay()];
+}
+
+export function dateWithinRange(date, rangeStart, rangeEnd) {
+  if (!rangeStart || !rangeEnd) return true;
+  const day = startOfDay(date).getTime();
+  return (
+    day >= startOfDay(rangeStart).getTime() && day <= startOfDay(rangeEnd).getTime()
+  );
+}
+
+export function getDefaultTermBounds(termKey) {
+  const year = new Date().getFullYear();
+  const key = normalizePlannerTerm(termKey);
+  if (key === "winter") {
+    return { start: new Date(year, 0, 1), end: new Date(year, 3, 30) };
+  }
+  if (key === "summer") {
+    return { start: new Date(year, 4, 1), end: new Date(year, 7, 31) };
+  }
+  return { start: new Date(year, 8, 1), end: new Date(year, 11, 31) };
+}
+
+export function getPlannerBounds(courses, termKey) {
+  let start = null;
+  let end = null;
+
+  for (const course of courses) {
+    const range = getCourseDateRange(course);
+    if (range.start && (!start || range.start < start)) start = range.start;
+    if (range.end && (!end || range.end > end)) end = range.end;
+  }
+
+  if (start && end) {
+    return { start: startOfDay(start), end: startOfDay(end) };
+  }
+
+  return getDefaultTermBounds(termKey);
+}
+
+export function buildWeekStarts(rangeStart, rangeEnd) {
+  const weeks = [];
+  let cursor = getWeekStartMonday(rangeStart);
+  const end = startOfDay(rangeEnd);
+
+  while (cursor <= end) {
+    weeks.push(new Date(cursor));
+    cursor = addDays(cursor, 7);
+  }
+
+  if (!weeks.length) {
+    weeks.push(getWeekStartMonday(rangeStart));
+  }
+
+  return weeks;
+}
+
+export function buildWeekDays(weekStart) {
+  return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+}
+
+export function formatDayHeader(date) {
+  return {
+    dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }),
+    dateLabel: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+  };
+}
+
+export function formatWeekNavLabel(weekStart) {
+  const weekEnd = addDays(weekStart, 6);
+  const sameMonth = weekStart.getMonth() === weekEnd.getMonth();
+  const sameYear = weekStart.getFullYear() === weekEnd.getFullYear();
+
+  const startLabel = weekStart.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear && sameMonth ? {} : { year: "numeric" }),
+  });
+  const endLabel = weekEnd.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  return `${startLabel} – ${endLabel}`;
+}
+
 export function groupCoursesByDateRange(courses) {
   const groups = new Map();
 
@@ -110,23 +229,4 @@ export function groupCoursesByDateRange(courses) {
     if (!b.range.start) return -1;
     return a.range.start - b.range.start;
   });
-}
-
-export function getSummerTimelineBounds(courses) {
-  const year =
-    courses
-      .map((course) => getCourseDateRange(course).start?.getFullYear())
-      .find(Boolean) ?? new Date().getFullYear();
-
-  return {
-    year,
-    start: new Date(year, 4, 1),
-    end: new Date(year, 8, 1),
-  };
-}
-
-export function getTimelinePosition(date, timelineStart, timelineEnd) {
-  const spanMs = timelineEnd.getTime() - timelineStart.getTime();
-  if (spanMs <= 0) return 0;
-  return ((date.getTime() - timelineStart.getTime()) / spanMs) * 100;
 }

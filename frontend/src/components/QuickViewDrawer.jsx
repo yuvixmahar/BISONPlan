@@ -113,14 +113,11 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
         aria-label="Close quick view overlay"
       />
       <aside className="absolute right-0 top-0 h-full w-full max-w-xl bg-white shadow-2xl border-l border-slate-200 overflow-y-auto">
-        <div className="p-4 border-b border-slate-200 flex items-start justify-between gap-3">
+        <div className="p-4 flex items-start justify-between gap-3">
           <div>
             <div className="font-heading text-xl text-slate-900">{code}</div>
             <div className="text-sm text-slate-600">{title}</div>
             {section ? <div className="text-xs text-slate-500 mt-1">Section {section}</div> : null}
-            <div className="text-xs text-slate-500 mt-1">
-              {instructor ? `Instructor: ${instructor}` : "Instructor TBA"}
-            </div>
           </div>
           <button
             type="button"

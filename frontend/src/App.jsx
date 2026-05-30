@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import CourseSearch from "./pages/CourseSearch.jsx";
 import WeeklyPlanner from "./components/WeeklyPlanner.jsx";
+import PlannerToast from "./components/PlannerToast.jsx";
 import {
   dateRangesOverlap,
   getCourseDateRange,
   normalizePlannerTerm,
+  PLANNER_TERMS,
 } from "./utils/planner.js";
 
 const DAYS = [
@@ -91,11 +93,15 @@ function firstConflict(existingCourses, nextCourse, termKey) {
   return null;
 }
 
+function getTermLabel(termKey) {
+  return PLANNER_TERMS.find((term) => term.key === termKey)?.label || termKey;
+}
+
 export default function App() {
   const [page, setPage] = useState("search");
   const [activePlannerTerm, setActivePlannerTerm] = useState("fall");
   const [plannerByTerm, setPlannerByTerm] = useState({ fall: [], winter: [], summer: [] });
-  const [plannerMessage, setPlannerMessage] = useState("");
+  const [plannerNotice, setPlannerNotice] = useState(null);
   const [plannerIdSeed, setPlannerIdSeed] = useState(1);
 
   function addCourseToPlanner(course, termKey) {
@@ -108,25 +114,33 @@ export default function App() {
     setPlannerByTerm((prev) => {
       const existing = prev[key] || [];
       if (existing.some((item) => getCourseIdentity(item) === courseIdentity)) {
-        setPlannerMessage(`${getCourseLabel(course)} is already in your ${key} planner.`);
+        setPlannerNotice({
+          tone: "warning",
+          message: `${getCourseLabel(course)} is already in your ${getTermLabel(key)} planner.`,
+        });
         return prev;
       }
 
       const conflictCourse = firstConflict(existing, course, key);
       if (conflictCourse) {
-        setPlannerMessage(
-          `Conflict blocked: ${getCourseLabel(course)} overlaps with ${getCourseLabel(conflictCourse)} in ${key}.`
-        );
+        setPlannerNotice({
+          tone: "error",
+          message: `Conflict blocked: ${getCourseLabel(course)} overlaps with ${getCourseLabel(conflictCourse)} in ${getTermLabel(key)}.`,
+        });
         return prev;
       }
 
-      setPlannerMessage("");
       const plannerCourse = { ...course, _plannerId: nextPlannerId };
+      setPlannerNotice({
+        tone: "success",
+        message: `${getCourseLabel(course)} added to ${getTermLabel(key)} planner.`,
+      });
+      setActivePlannerTerm(key);
       return { ...prev, [key]: [...existing, plannerCourse] };
     });
-
-    setActivePlannerTerm(key);
   }
+
+  const dismissPlannerNotice = useCallback(() => setPlannerNotice(null), []);
 
   function removeCourseFromPlanner(termKey, plannerCourseId) {
     setPlannerByTerm((prev) => ({
@@ -135,7 +149,7 @@ export default function App() {
         (item) => item?._plannerId !== plannerCourseId
       ),
     }));
-    setPlannerMessage("");
+    setPlannerNotice(null);
   }
 
   return (
@@ -172,8 +186,6 @@ export default function App() {
         <CourseSearch
           isActive={page === "search"}
           onAddToPlanner={addCourseToPlanner}
-          plannerMessage={plannerMessage}
-          onClearPlannerMessage={() => setPlannerMessage("")}
         />
       </div>
       <div hidden={page !== "planner"} className="max-w-6xl mx-auto px-4 py-6">
@@ -184,6 +196,7 @@ export default function App() {
           onRemoveCourse={removeCourseFromPlanner}
         />
       </div>
+      <PlannerToast notice={plannerNotice} onDismiss={dismissPlannerNotice} />
     </div>
   );
 }

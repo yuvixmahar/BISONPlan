@@ -63,8 +63,6 @@ function inTimeWindow(course, timeFilter) {
 export default function CourseSearch({
   isActive = true,
   onAddToPlanner,
-  plannerMessage,
-  onClearPlannerMessage,
 }) {
   const [terms, setTerms] = useState([]);
   const [termCode, setTermCode] = useState("");
@@ -400,8 +398,8 @@ export default function CourseSearch({
   }
 
   function plannerTermFromSelection() {
-    const selected = terms.find((t) => t.code === termCode)?.description || "";
-    return plannerTermFromTermDescription(selected);
+    const selected = terms.find((t) => t.code === termCode);
+    return plannerTermFromTermDescription(selected?.description || "", termCode);
   }
 
   function addCourseToPlanner(course) {
@@ -557,18 +555,6 @@ export default function CourseSearch({
         </div>
               
         <div className="mt-6">
-          {plannerMessage ? (
-            <div className="mb-3 text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start justify-between gap-3">
-              <span>{plannerMessage}</span>
-              <button
-                type="button"
-                onClick={onClearPlannerMessage}
-                className="text-xs px-2 py-1 rounded border border-amber-300 hover:bg-amber-100"
-              >
-                Dismiss
-              </button>
-            </div>
-          ) : null}
           {!termCode ? (
             <div className="text-slate-600 bg-white border border-slate-200 rounded-lg p-4">
               Select a term to begin.
