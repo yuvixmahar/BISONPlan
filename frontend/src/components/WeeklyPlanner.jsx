@@ -20,9 +20,17 @@ import {
 const DEFAULT_START_MINUTES = 8 * 60;
 const DEFAULT_END_MINUTES = 22 * 60;
 const EVENT_GAP_PX = 2;
-const GRID_HEIGHT_CLASS = "h-[min(calc(100vh-13rem),40rem)] min-h-72";
+const GRID_HEIGHT_DEFAULT = "h-[min(calc(100vh-13rem),40rem)] min-h-72";
 const GRID_LAYOUT_CLASS =
   "min-w-[940px] grid grid-cols-[72px_repeat(7,minmax(128px,1fr))] gap-2";
+
+function getGridHeightClass(totalMinutes) {
+  if (totalMinutes <= 7 * 60) return GRID_HEIGHT_DEFAULT;
+  if (totalMinutes <= 9 * 60) {
+    return "h-[min(calc(100vh-12rem),44rem)] min-h-80";
+  }
+  return "h-[min(calc(100vh-11rem),52rem)] min-h-[22rem]";
+}
 
 function toDateKey(date) {
   const y = date.getFullYear();
@@ -101,11 +109,12 @@ function normalizeEvents(courses) {
       const activeStart = meetingStart || rangeStart;
       const activeEnd = meetingEnd || rangeEnd;
 
-      const locationParts = [
-        mt.buildingDescription || mt.building || "",
-        mt.room ? `Room ${mt.room}` : "",
-      ].filter(Boolean);
-      const location = locationParts.join(" - ") || "Location TBA";
+      const building = mt.buildingDescription || mt.building || "";
+      const room = mt.room || "";
+      const location =
+        building && room
+          ? `${building} ${room}`
+          : building || (room ? `Room ${room}` : "") || "Location TBA";
       const sectionType = mt.meetingTypeDescription || mt.meetingType || "Class";
       const dayKeys = [
         "monday",
@@ -191,8 +200,8 @@ function getTimeRangeForEvents(events) {
   let minStart = Math.min(...events.map((ev) => ev.start));
   let maxEnd = Math.max(...events.map((ev) => ev.end));
 
-  minStart = roundDownToHour(Math.max(DEFAULT_START_MINUTES, minStart - 15));
-  maxEnd = roundUpToHour(Math.min(DEFAULT_END_MINUTES, maxEnd + 15));
+  minStart = roundDownToHour(Math.max(DEFAULT_START_MINUTES, minStart - 5));
+  maxEnd = roundUpToHour(Math.min(DEFAULT_END_MINUTES, maxEnd + 5));
 
   if (maxEnd <= minStart) {
     maxEnd = minStart + 60;
@@ -260,6 +269,69 @@ function layoutDayEvents(dayEvents) {
   }
 
   return laidOut;
+}
+
+function formatTimeRangeShort(start, end) {
+  return `${toTimeLabel(start)}–${toTimeLabel(end)}`;
+}
+
+/** comfortable = full lines; compact = merged meta; tight = minimal padding for ~50 min blocks */
+function getEventCardDensity(durationMinutes, heightPct) {
+  if (durationMinutes >= 100 || heightPct >= 13) return "comfortable";
+  if (durationMinutes >= 65 || heightPct >= 8) return "compact";
+  return "tight";
+}
+
+function PlannerEventBlock({ ev, density, style, title }) {
+  const codeLine = `${ev.code}${ev.section ? ` ${ev.section}` : ""}`;
+  const timeLine = formatTimeRangeShort(ev.start, ev.end);
+  const locationLine = ev.location || "Location TBA";
+
+  const shellClass =
+    density === "tight"
+      ? "px-1 py-0.5 text-[10px] leading-[1.2]"
+      : density === "compact"
+        ? "px-1.5 py-1 text-[10px] leading-[1.25]"
+        : "px-2 py-1.5 text-[11px] leading-snug";
+
+  return (
+    <div
+      className={`absolute rounded-md border border-blue-200 bg-blue-100 text-blue-950 shadow-sm overflow-hidden box-border ${shellClass}`}
+      style={style}
+      title={title}
+    >
+      {density === "tight" ? (
+        <>
+          <div className="font-semibold truncate">{codeLine}</div>
+          <div className="truncate text-blue-900/90 text-[9px]">
+            {timeLine} · {ev.sectionType}
+          </div>
+          <div className="truncate text-blue-900/75 text-[9px]">{locationLine}</div>
+        </>
+      ) : density === "compact" ? (
+        <>
+          <div className="font-semibold wrap-break-word leading-tight">{codeLine}</div>
+          <div className="wrap-break-word text-blue-900/90 text-[9px] leading-tight">
+            {timeLine} · {ev.sectionType}
+          </div>
+          <div className="wrap-break-word text-blue-900/80 text-[9px] leading-tight line-clamp-2">
+            {locationLine}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="font-semibold wrap-break-word">{codeLine}</div>
+          <div className="wrap-break-word text-blue-900/90 text-[10px]">{timeLine}</div>
+          <div className="wrap-break-word text-blue-900 font-medium text-[10px] leading-tight">
+            {ev.sectionType}
+          </div>
+          <div className="wrap-break-word text-blue-900/80 text-[10px] leading-tight line-clamp-2">
+            {locationLine}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 function WeekNavigator({ weekLabel, weekNumber, totalWeeks, onPrevious, onNext }) {
@@ -353,12 +425,19 @@ function WeeklyScheduleGrid({ weekStart, events }) {
   }, [timeRange.startMinutes, timeRange.endMinutes]);
 
   const hasAnyEvents = weekVisibleEvents.length > 0;
+  const gridHeightClass = getGridHeightClass(timeRange.totalMinutes);
 
   const eventPosition = (ev) => {
     const { startMinutes, totalMinutes } = timeRange;
     const topPct = ((ev.start - startMinutes) / totalMinutes) * 100;
     const heightPct = ((ev.end - ev.start) / totalMinutes) * 100;
-    return { topPct, heightPct, durationMinutes: ev.end - ev.start };
+    const durationMinutes = ev.end - ev.start;
+    return {
+      topPct,
+      heightPct,
+      durationMinutes,
+      density: getEventCardDensity(durationMinutes, heightPct),
+    };
   };
 
   return (
@@ -394,7 +473,7 @@ function WeeklyScheduleGrid({ weekStart, events }) {
             );
           })}
 
-          <div className={`relative ${GRID_HEIGHT_CLASS}`}>
+          <div className={`relative ${gridHeightClass}`}>
             {hours.map((minute) => (
               <div
                 key={minute}
@@ -420,7 +499,7 @@ function WeeklyScheduleGrid({ weekStart, events }) {
             return (
               <div
                 key={`grid-${dateKey}`}
-                className={`relative rounded-lg border ${GRID_HEIGHT_CLASS} ${
+                className={`relative rounded-lg border ${gridHeightClass} ${
                   hasPossibleClass
                     ? "border-slate-200 bg-slate-50/40"
                     : "border-slate-100 bg-slate-50/20"
@@ -436,43 +515,32 @@ function WeeklyScheduleGrid({ weekStart, events }) {
                   />
                 ))}
                 {layout.map(({ ev, column, totalColumns }) => {
-                  const { topPct, heightPct } = eventPosition(ev);
-                  const { dayLabel } = formatDayHeader(dayDate);
+                  const { topPct, heightPct, density } = eventPosition(ev);
                   const widthPct = 100 / totalColumns;
                   const leftPct = column * widthPct;
+                  const tooltip = [
+                    `${ev.code}${ev.section ? ` ${ev.section}` : ""}`,
+                    formatTimeRangeShort(ev.start, ev.end),
+                    ev.sectionType,
+                    ev.location,
+                    ev.instructor,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ");
 
                   return (
-                    <div
+                    <PlannerEventBlock
                       key={ev.id}
-                      className="absolute rounded-md border border-blue-200 bg-blue-100 text-blue-950 shadow-sm overflow-hidden box-border px-2 py-1.5 text-[11px] leading-[1.35]"
+                      ev={ev}
+                      density={density}
+                      title={tooltip}
                       style={{
                         top: `calc(${topPct}% + ${EVENT_GAP_PX / 2}px)`,
                         height: `calc(${heightPct}% - ${EVENT_GAP_PX}px)`,
                         left: `calc(${leftPct}% + 3px)`,
                         width: `calc(${widthPct}% - 6px)`,
                       }}
-                      title={[
-                        `${ev.code}${ev.section ? ` ${ev.section}` : ""}`,
-                        `${toTimeLabel(ev.start)} – ${toTimeLabel(ev.end)}`,
-                        ev.sectionType,
-                        ev.location,
-                        ev.instructor,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    >
-                      <div className="font-semibold wrap-break-word">
-                        {ev.code}
-                        {ev.section ? ` ${ev.section}` : ""}
-                      </div>
-                      <div className="wrap-break-word text-blue-900/90 text-[10px]">
-                        {toTimeLabel(ev.start)} – {toTimeLabel(ev.end)}
-                      </div>
-                      <div className="wrap-break-word text-blue-900 font-medium mt-0.5">
-                        {ev.sectionType}
-                      </div>
-                      <div className="wrap-break-word text-blue-900/80 mt-0.5">{ev.location}</div>
-                    </div>
+                    />
                   );
                 })}
               </div>
