@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getInstructorName } from "../utils/course.js";
 import { getSubjects, getTerms } from "../api/client.js";
 import useCourses from "../hooks/useCourses.js";
 import FilterPanel from "../components/FilterPanel.jsx";
@@ -361,12 +362,7 @@ export default function CourseSearch({
         if (!hasDay(c, dayFilter)) return false;
         if (!inTimeWindow(c, timeFilter)) return false;
         if (instructorQ) {
-          const instructor = (
-            c.instructorName ||
-            c.instructor ||
-            c.instructorNames ||
-            ""
-          ).toLowerCase();
+          const instructor = getInstructorName(c).toLowerCase();
           if (!instructor.includes(instructorQ)) return false;
         }
         if (q) {

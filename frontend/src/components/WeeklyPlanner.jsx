@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { getInstructorName } from "../utils/course.js";
 
 const DAYS = [
   ["monday", "Mon"],
@@ -54,6 +55,10 @@ function getSection(course) {
   );
 }
 
+function getInstructor(course) {
+  return getInstructorName(course);
+}
+
 function getMeetings(course) {
   const mf = Array.isArray(course?.meetingsFaculty) ? course.meetingsFaculty : [];
   return mf.map((m) => m?.meetingTime || null).filter(Boolean);
@@ -65,6 +70,7 @@ function normalizeEvents(courses) {
     const plannerId = course?._plannerId || "";
     const code = courseCode(course);
     const section = getSection(course);
+    const instructor = getInstructor(course);
     const title = pickFirst(course, ["title", "courseTitle", "subjectTitle"], "");
     const meetings = getMeetings(course);
     for (let idx = 0; idx < meetings.length; idx += 1) {
@@ -88,6 +94,7 @@ function normalizeEvents(courses) {
           end,
           code,
           section,
+          instructor,
           title,
           sectionType,
           location,
@@ -160,13 +167,16 @@ export default function WeeklyPlanner({
               {plannedCourses.map((course) => {
                 const code = courseCode(course);
                 const section = getSection(course);
+                const instructor = getInstructor(course);
                 const id = course?._plannerId || `${code}-${section}`;
                 return (
                   <span
                     key={id}
                     className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-700"
                   >
-                    {code}{section ? ` · ${section}` : ""}
+                    {code}
+                    {section ? ` · ${section}` : ""}
+                    {instructor ? ` · ${instructor}` : ""}
                     <button
                       type="button"
                       className="text-slate-500 hover:text-slate-800"
@@ -232,6 +242,9 @@ export default function WeeklyPlanner({
                           <div className="font-semibold truncate">
                             {ev.code} {ev.section || "TBA"}
                           </div>
+                          {ev.instructor ? (
+                            <div className="truncate text-blue-900/80">{ev.instructor}</div>
+                          ) : null}
                           <div className="truncate">{ev.sectionType}</div>
                           <div className="truncate">
                             {toTimeLabel(ev.start)} - {toTimeLabel(ev.end)}

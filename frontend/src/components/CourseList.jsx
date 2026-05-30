@@ -12,7 +12,6 @@ export default function CourseList({ courses, termCode, onQuickView, onAddToPlan
           <CourseCard
             key={course.courseReferenceNumber || course.crn || idx}
             course={course}
-            termCode={termCode}
             onQuickView={onQuickView}
             onAddToPlanner={onAddToPlanner}
           />

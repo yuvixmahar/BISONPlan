@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getCourseDescription } from "../api/client.js";
+import { getInstructorName, getMeetingsWithFaculty } from "../utils/course.js";
 
 function pickFirst(obj, keys, fallback = "") {
   for (const k of keys) {
@@ -16,13 +17,6 @@ function toAmPm(hhmm) {
   const suffix = hh >= 12 ? "PM" : "AM";
   const twelve = hh % 12 === 0 ? 12 : hh % 12;
   return `${twelve}:${mm} ${suffix}`;
-}
-
-function meetingEntries(course) {
-  const mf = Array.isArray(course?.meetingsFaculty) ? course.meetingsFaculty : [];
-  return mf
-    .map((m) => m?.meetingTime || null)
-    .filter(Boolean);
 }
 
 function meetingDays(mt) {
@@ -70,7 +64,8 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
     [course]
   );
 
-  const meetings = useMemo(() => meetingEntries(course), [course]);
+  const instructor = useMemo(() => getInstructorName(course), [course]);
+  const meetings = useMemo(() => getMeetingsWithFaculty(course), [course]);
   const prereqSplit = useMemo(
     () => splitSectionInfo(detailData?.prerequisites_raw || ""),
     [detailData]
@@ -123,6 +118,9 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
             <div className="font-heading text-xl text-slate-900">{code}</div>
             <div className="text-sm text-slate-600">{title}</div>
             {section ? <div className="text-xs text-slate-500 mt-1">Section {section}</div> : null}
+            <div className="text-xs text-slate-500 mt-1">
+              {instructor ? `Instructor: ${instructor}` : "Instructor TBA"}
+            </div>
           </div>
           <button
             type="button"
@@ -142,7 +140,7 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
               <div className="text-sm text-slate-600">No meeting details available.</div>
             ) : (
               <div className="space-y-3">
-                {meetings.map((mt, idx) => {
+                {meetings.map(({ meetingTime: mt, instructor: meetingInstructor }, idx) => {
                   const days = meetingDays(mt).join(" ");
                   const time = `${toAmPm(mt.beginTime)} - ${toAmPm(mt.endTime)}`.trim();
                   const building = mt.buildingDescription || mt.building || "TBA";
@@ -154,6 +152,10 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
                         {days ? <span className="px-2 py-1 rounded bg-slate-100">{days}</span> : null}
                         {time.trim() !== "-" ? <span className="px-2 py-1 rounded bg-blue-50 text-blue-800">{time}</span> : null}
                         <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-800">{type}</span>
+                      </div>
+                      <div className="text-sm text-slate-700">
+                        <span className="font-medium">Instructor:</span>{" "}
+                        {meetingInstructor || instructor || "TBA"}
                       </div>
                       <div className="text-sm text-slate-700">
                         <span className="font-medium">Location:</span> {building} {room !== "TBA" ? `• Room ${room}` : ""}
