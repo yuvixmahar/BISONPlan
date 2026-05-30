@@ -1,28 +1,33 @@
-import { useMemo } from "react";
-import SummerDateTimeline from "./SummerDateTimeline.jsx";
+import { useEffect, useMemo, useState } from "react";
 import { getInstructorName } from "../utils/course.js";
 import {
   PLANNER_TERMS,
+  addDays,
+  buildWeekDays,
+  buildWeekStarts,
+  dateWithinRange,
   formatDateRange,
-  formatMonthSpan,
+  formatDayHeader,
+  formatWeekNavLabel,
   getCourseDateRange,
-  groupCoursesByDateRange,
+  getDayKeyFromDate,
+  getPlannerBounds,
+  getWeekStartMonday,
+  parseCourseDate,
+  startOfDay,
 } from "../utils/planner.js";
-
-const DAYS = [
-  ["monday", "Mon"],
-  ["tuesday", "Tue"],
-  ["wednesday", "Wed"],
-  ["thursday", "Thu"],
-  ["friday", "Fri"],
-  ["saturday", "Sat"],
-  ["sunday", "Sun"],
-];
 
 const START_MINUTES = 8 * 60;
 const END_MINUTES = 22 * 60;
 const TOTAL_MINUTES = END_MINUTES - START_MINUTES;
 const GRID_HEIGHT_PX = 1180;
+
+function toDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 function pickFirst(obj, keys, fallback = "") {
   for (const k of keys) {
@@ -81,26 +86,40 @@ function normalizeEvents(courses) {
     const instructor = getInstructor(course);
     const title = pickFirst(course, ["title", "courseTitle", "subjectTitle"], "");
     const { start: rangeStart, end: rangeEnd } = getCourseDateRange(course);
-    const dateSpan =
-      rangeStart && rangeEnd ? formatMonthSpan(rangeStart, rangeEnd) : "";
     const meetings = getMeetings(course);
+
     for (let idx = 0; idx < meetings.length; idx += 1) {
       const mt = meetings[idx];
       const start = toMinutes(mt.beginTime);
       const end = toMinutes(mt.endTime);
       if (start == null || end == null || end <= start) continue;
+
+      const meetingStart = parseCourseDate(mt.startDate) || rangeStart;
+      const meetingEnd = parseCourseDate(mt.endDate) || rangeEnd;
+      const activeStart = meetingStart || rangeStart;
+      const activeEnd = meetingEnd || rangeEnd;
+
       const locationParts = [
         mt.buildingDescription || mt.building || "",
         mt.room ? `Room ${mt.room}` : "",
       ].filter(Boolean);
       const location = locationParts.join(" - ") || "Location TBA";
       const sectionType = mt.meetingTypeDescription || mt.meetingType || "Class";
-      for (const [dayKey, dayLabel] of DAYS) {
+      const dayKeys = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+      ];
+
+      for (const dayKey of dayKeys) {
         if (!mt?.[dayKey]) continue;
         out.push({
           id: `${plannerId}-${idx}-${dayKey}-${start}-${end}`,
           dayKey,
-          dayLabel,
           start,
           end,
           code,
@@ -109,7 +128,8 @@ function normalizeEvents(courses) {
           title,
           sectionType,
           location,
-          dateSpan,
+          rangeStart: activeStart,
+          rangeEnd: activeEnd,
         });
       }
     }
@@ -149,17 +169,61 @@ function CourseChip({ course, termKey, onRemoveCourse }) {
   );
 }
 
-function WeeklyScheduleGrid({ events, showDateSpan = false }) {
-  const byDay = useMemo(() => {
-    const map = Object.fromEntries(DAYS.map(([k]) => [k, []]));
-    for (const ev of events) {
-      map[ev.dayKey].push(ev);
-    }
-    for (const [key] of DAYS) {
-      map[key].sort((a, b) => a.start - b.start);
+function WeekNavigator({ weekLabel, weekNumber, totalWeeks, onPrevious, onNext }) {
+  const atStart = weekNumber <= 1;
+  const atEnd = weekNumber >= totalWeeks;
+
+  return (
+    <div className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+      <button
+        type="button"
+        onClick={onPrevious}
+        disabled={atStart}
+        className="px-3 py-1.5 text-sm rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+        aria-label="Previous week"
+      >
+        ← Previous
+      </button>
+
+      <div className="text-center min-w-[180px]">
+        <div className="text-sm font-semibold text-slate-900">{weekLabel}</div>
+        <div className="text-xs text-slate-600 mt-0.5">
+          Week {weekNumber} of {totalWeeks}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={atEnd}
+        className="px-3 py-1.5 text-sm rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+        aria-label="Next week"
+      >
+        Next →
+      </button>
+    </div>
+  );
+}
+
+function WeeklyScheduleGrid({ weekStart, events }) {
+  const weekDays = useMemo(() => buildWeekDays(weekStart), [weekStart]);
+
+  const eventsByDateKey = useMemo(() => {
+    const map = new Map();
+    for (const dayDate of weekDays) {
+      const dayKey = getDayKeyFromDate(dayDate);
+      const dateKey = toDateKey(dayDate);
+      const dayEvents = events
+        .filter(
+          (ev) =>
+            ev.dayKey === dayKey &&
+            dateWithinRange(dayDate, ev.rangeStart, ev.rangeEnd)
+        )
+        .sort((a, b) => a.start - b.start);
+      map.set(dateKey, { dayDate, dayEvents });
     }
     return map;
-  }, [events]);
+  }, [events, weekDays]);
 
   const hours = useMemo(() => {
     const result = [];
@@ -167,153 +231,133 @@ function WeeklyScheduleGrid({ events, showDateSpan = false }) {
     return result;
   }, []);
 
-  if (!events.length) {
-    return (
-      <div className="text-sm text-slate-600 rounded-lg border border-dashed border-slate-200 px-4 py-6 text-center">
-        No weekly meeting times for this session.
-      </div>
-    );
-  }
+  const hasAnyEvents = [...eventsByDateKey.values()].some(
+    ({ dayEvents }) => dayEvents.length > 0
+  );
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[860px] grid grid-cols-[70px_repeat(7,minmax(110px,1fr))] gap-2">
-        <div />
-        {DAYS.map(([, label]) => (
-          <div key={label} className="text-xs font-semibold text-slate-600 px-2 py-1">
-            {label}
-          </div>
-        ))}
-
-        <div className="relative" style={{ height: `${GRID_HEIGHT_PX}px` }}>
-          {hours.map((minute) => (
-            <div
-              key={minute}
-              className="absolute text-[10px] text-slate-500 -translate-y-1/2"
-              style={{ top: `${((minute - START_MINUTES) / TOTAL_MINUTES) * 100}%` }}
-            >
-              {toTimeLabel(minute)}
-            </div>
-          ))}
+    <div className="space-y-3">
+      {!hasAnyEvents ? (
+        <div className="text-sm text-slate-600 rounded-lg border border-dashed border-slate-200 px-4 py-3 text-center">
+          No classes scheduled this week.
         </div>
+      ) : null}
 
-        {DAYS.map(([dayKey, dayLabel]) => (
-          <div
-            key={dayKey}
-            className="relative rounded-lg border border-slate-200 bg-slate-50/40"
-            style={{ height: `${GRID_HEIGHT_PX}px` }}
-          >
+      <div className="overflow-x-auto">
+        <div className="min-w-[860px] grid grid-cols-[70px_repeat(7,minmax(110px,1fr))] gap-2">
+          <div />
+          {weekDays.map((dayDate) => {
+            const { dayLabel, dateLabel } = formatDayHeader(dayDate);
+            const dateKey = toDateKey(dayDate);
+            const dayKey = getDayKeyFromDate(dayDate);
+            const hasPossibleClass = events.some(
+              (ev) =>
+                ev.dayKey === dayKey && dateWithinRange(dayDate, ev.rangeStart, ev.rangeEnd)
+            );
+
+            return (
+              <div
+                key={dateKey}
+                className={`px-2 py-1 rounded-md ${
+                  hasPossibleClass ? "bg-white" : "bg-slate-50 text-slate-400"
+                }`}
+              >
+                <div className="text-xs font-semibold">{dayLabel}</div>
+                <div className="text-[11px] mt-0.5">{dateLabel}</div>
+              </div>
+            );
+          })}
+
+          <div className="relative" style={{ height: `${GRID_HEIGHT_PX}px` }}>
             {hours.map((minute) => (
               <div
-                key={`${dayKey}-${minute}`}
-                className="absolute left-0 right-0 border-t border-slate-200/80"
+                key={minute}
+                className="absolute text-[10px] text-slate-500 -translate-y-1/2"
                 style={{ top: `${((minute - START_MINUTES) / TOTAL_MINUTES) * 100}%` }}
-              />
+              >
+                {toTimeLabel(minute)}
+              </div>
             ))}
-            {(byDay[dayKey] || []).map((ev) => {
-              const topPct = ((ev.start - START_MINUTES) / TOTAL_MINUTES) * 100;
-              const heightPct = ((ev.end - ev.start) / TOTAL_MINUTES) * 100;
-              const durationMinutes = ev.end - ev.start;
-              const showWrappedLocation = durationMinutes >= 120;
-              return (
-                <div
-                  key={ev.id}
-                  className="absolute left-1 right-1 rounded-md border border-blue-200 bg-blue-100 px-2 py-1.5 text-[11px] leading-tight text-blue-950 shadow-sm overflow-hidden"
-                  style={{
-                    top: `${topPct}%`,
-                    height: `${Math.max(heightPct, 4)}%`,
-                  }}
-                  title={`${ev.code} ${ev.section} (${dayLabel})`}
-                >
-                  <div className="font-semibold truncate">
-                    {ev.code} {ev.section || "TBA"}
-                  </div>
-                  {showDateSpan && ev.dateSpan ? (
-                    <div className="truncate text-blue-900/70">{ev.dateSpan}</div>
-                  ) : null}
-                  {ev.instructor ? (
-                    <div className="truncate text-blue-900/80">{ev.instructor}</div>
-                  ) : null}
-                  <div className="truncate">{ev.sectionType}</div>
-                  <div className="truncate">
-                    {toTimeLabel(ev.start)} - {toTimeLabel(ev.end)}
-                  </div>
-                  {showWrappedLocation ? (
-                    <div className="mt-0.5 wrap-break-word whitespace-normal">{ev.location}</div>
-                  ) : (
-                    <div className="truncate">{ev.location}</div>
-                  )}
-                </div>
-              );
-            })}
           </div>
-        ))}
+
+          {weekDays.map((dayDate) => {
+            const dateKey = toDateKey(dayDate);
+            const { dayEvents } = eventsByDateKey.get(dateKey) || { dayEvents: [] };
+            const dayKey = getDayKeyFromDate(dayDate);
+            const hasPossibleClass = events.some(
+              (ev) =>
+                ev.dayKey === dayKey && dateWithinRange(dayDate, ev.rangeStart, ev.rangeEnd)
+            );
+
+            return (
+              <div
+                key={`grid-${dateKey}`}
+                className={`relative rounded-lg border ${
+                  hasPossibleClass
+                    ? "border-slate-200 bg-slate-50/40"
+                    : "border-slate-100 bg-slate-50/20"
+                }`}
+                style={{ height: `${GRID_HEIGHT_PX}px` }}
+              >
+                {hours.map((minute) => (
+                  <div
+                    key={`${dateKey}-${minute}`}
+                    className="absolute left-0 right-0 border-t border-slate-200/80"
+                    style={{ top: `${((minute - START_MINUTES) / TOTAL_MINUTES) * 100}%` }}
+                  />
+                ))}
+                {dayEvents.map((ev) => {
+                  const topPct = ((ev.start - START_MINUTES) / TOTAL_MINUTES) * 100;
+                  const heightPct = ((ev.end - ev.start) / TOTAL_MINUTES) * 100;
+                  const durationMinutes = ev.end - ev.start;
+                  const showWrappedLocation = durationMinutes >= 120;
+                  const { dayLabel } = formatDayHeader(dayDate);
+
+                  return (
+                    <div
+                      key={ev.id}
+                      className="absolute left-1 right-1 rounded-md border border-blue-200 bg-blue-100 px-2 py-1.5 text-[11px] leading-tight text-blue-950 shadow-sm overflow-hidden"
+                      style={{
+                        top: `${topPct}%`,
+                        height: `${Math.max(heightPct, 4)}%`,
+                      }}
+                      title={`${ev.code} ${ev.section} (${dayLabel})`}
+                    >
+                      <div className="font-semibold truncate">
+                        {ev.code} {ev.section || "TBA"}
+                      </div>
+                      {ev.instructor ? (
+                        <div className="truncate text-blue-900/80">{ev.instructor}</div>
+                      ) : null}
+                      <div className="truncate">{ev.sectionType}</div>
+                      <div className="truncate">
+                        {toTimeLabel(ev.start)} - {toTimeLabel(ev.end)}
+                      </div>
+                      {showWrappedLocation ? (
+                        <div className="mt-0.5 wrap-break-word whitespace-normal">{ev.location}</div>
+                      ) : (
+                        <div className="truncate">{ev.location}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-function SummerPlannerView({ plannedCourses, termKey, onRemoveCourse }) {
-  const sessionGroups = useMemo(
-    () => groupCoursesByDateRange(plannedCourses),
-    [plannedCourses]
-  );
-
-  return (
-    <div className="space-y-6">
-      <SummerDateTimeline courses={plannedCourses} />
-
-      {sessionGroups.map((group) => {
-        const sessionLabel =
-          group.range.start && group.range.end
-            ? formatDateRange(group.range.start, group.range.end)
-            : "Unknown session dates";
-        const monthSpan =
-          group.range.start && group.range.end
-            ? formatMonthSpan(group.range.start, group.range.end)
-            : null;
-        const events = normalizeEvents(group.courses);
-
-        return (
-          <section
-            key={group.key}
-            className="rounded-lg border border-slate-200 bg-white p-3 md:p-4 space-y-4"
-            aria-label={`Summer session ${sessionLabel}`}
-          >
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">{sessionLabel}</h3>
-                {monthSpan ? (
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    Runs {monthSpan} · {group.courses.length}{" "}
-                    {group.courses.length === 1 ? "course" : "courses"}
-                  </p>
-                ) : (
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    {group.courses.length}{" "}
-                    {group.courses.length === 1 ? "course" : "courses"}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {group.courses.map((course) => (
-                <CourseChip
-                  key={course?._plannerId || courseCode(course)}
-                  course={course}
-                  termKey={termKey}
-                  onRemoveCourse={onRemoveCourse}
-                />
-              ))}
-            </div>
-
-            <WeeklyScheduleGrid events={events} showDateSpan />
-          </section>
-        );
-      })}
-    </div>
-  );
+function findInitialWeekIndex(weekStarts) {
+  if (!weekStarts.length) return 0;
+  const today = startOfDay(new Date());
+  const index = weekStarts.findIndex((weekStart) => {
+    const weekEnd = addDays(weekStart, 6);
+    return today >= weekStart && today <= weekEnd;
+  });
+  return index >= 0 ? index : 0;
 }
 
 export default function WeeklyPlanner({
@@ -324,6 +368,22 @@ export default function WeeklyPlanner({
 }) {
   const plannedCourses = plannerByTerm[activePlannerTerm] || [];
   const events = useMemo(() => normalizeEvents(plannedCourses), [plannedCourses]);
+  const bounds = useMemo(
+    () => getPlannerBounds(plannedCourses, activePlannerTerm),
+    [plannedCourses, activePlannerTerm]
+  );
+  const weekStarts = useMemo(
+    () => buildWeekStarts(bounds.start, bounds.end),
+    [bounds.start, bounds.end]
+  );
+  const [weekIndex, setWeekIndex] = useState(0);
+
+  useEffect(() => {
+    setWeekIndex(findInitialWeekIndex(weekStarts));
+  }, [activePlannerTerm, weekStarts]);
+
+  const safeWeekIndex = Math.min(Math.max(weekIndex, 0), Math.max(weekStarts.length - 1, 0));
+  const currentWeekStart = weekStarts[safeWeekIndex] || getWeekStartMonday(bounds.start);
   const activeTermLabel =
     PLANNER_TERMS.find((term) => term.key === activePlannerTerm)?.label || activePlannerTerm;
 
@@ -333,9 +393,8 @@ export default function WeeklyPlanner({
         <div>
           <h2 className="font-heading text-2xl text-slate-900">Week at a Glance</h2>
           <p className="text-sm text-slate-600 mt-1">
-            {activePlannerTerm === "summer"
-              ? "Summer courses are grouped by date span so you can compare May–June, July–August, and full-summer schedules."
-              : "Visualize class times and locations across Fall, Winter, and Summer terms."}
+            Browse week by week from the first to last class date. Summer, fall, and winter all
+            use the same calendar view.
           </p>
         </div>
         <div
@@ -368,12 +427,6 @@ export default function WeeklyPlanner({
             No courses added yet for {activeTermLabel.toLowerCase()}. Use “Add to Planner” from
             search results.
           </div>
-        ) : activePlannerTerm === "summer" ? (
-          <SummerPlannerView
-            plannedCourses={plannedCourses}
-            termKey={activePlannerTerm}
-            onRemoveCourse={onRemoveCourse}
-          />
         ) : (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -386,7 +439,18 @@ export default function WeeklyPlanner({
                 />
               ))}
             </div>
-            <WeeklyScheduleGrid events={events} />
+
+            <WeekNavigator
+              weekLabel={formatWeekNavLabel(currentWeekStart)}
+              weekNumber={safeWeekIndex + 1}
+              totalWeeks={weekStarts.length}
+              onPrevious={() => setWeekIndex((prev) => Math.max(prev - 1, 0))}
+              onNext={() =>
+                setWeekIndex((prev) => Math.min(prev + 1, Math.max(weekStarts.length - 1, 0)))
+              }
+            />
+
+            <WeeklyScheduleGrid weekStart={currentWeekStart} events={events} />
           </div>
         )}
       </div>
