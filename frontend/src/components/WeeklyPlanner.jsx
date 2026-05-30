@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { getInstructorName } from "../utils/course.js";
+import {
+  getCourseCode,
+  getCourseSection,
+  getInstructorName,
+} from "../utils/course.js";
 import {
   PLANNER_TERMS,
   addDays,
@@ -13,13 +17,18 @@ import {
   getDayKeyFromDate,
   getPlannerBounds,
   getWeekStartMonday,
-  parseCourseDate,
   startOfDay,
 } from "../utils/planner.js";
+import {
+  buildEventTooltip,
+  EVENT_GAP_PX,
+  getEventCardDensity,
+  getTimeRangeForEvents,
+  layoutDayEvents,
+  normalizePlannerEvents,
+} from "../utils/plannerSchedule.js";
+import { formatMinutesAmPm, formatTimeRangeFromMinutes } from "../utils/time.js";
 
-const DEFAULT_START_MINUTES = 8 * 60;
-const DEFAULT_END_MINUTES = 22 * 60;
-const EVENT_GAP_PX = 2;
 const GRID_HEIGHT_DEFAULT = "h-[min(calc(100vh-13rem),40rem)] min-h-72";
 const GRID_LAYOUT_CLASS =
   "min-w-[940px] grid grid-cols-[72px_repeat(7,minmax(128px,1fr))] gap-2";
@@ -39,119 +48,10 @@ function toDateKey(date) {
   return `${y}-${m}-${d}`;
 }
 
-function pickFirst(obj, keys, fallback = "") {
-  for (const k of keys) {
-    if (obj && obj[k] != null && obj[k] !== "") return obj[k];
-  }
-  return fallback;
-}
-
-function toMinutes(hhmm) {
-  const raw = String(hhmm || "").padStart(4, "0");
-  if (!/^\d{4}$/.test(raw)) return null;
-  const hh = Number(raw.slice(0, 2));
-  const mm = Number(raw.slice(2));
-  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
-  return hh * 60 + mm;
-}
-
-function toTimeLabel(totalMinutes) {
-  const hh = Math.floor(totalMinutes / 60);
-  const mm = totalMinutes % 60;
-  const suffix = hh >= 12 ? "PM" : "AM";
-  const normalized = hh % 12 === 0 ? 12 : hh % 12;
-  return `${normalized}:${String(mm).padStart(2, "0")} ${suffix}`;
-}
-
-function courseCode(course) {
-  const subject = pickFirst(course, ["subjectCode", "subject", "subj"]);
-  const number = pickFirst(course, ["courseNumber", "courseNbr", "courseNum", "catalogNumber"]);
-  if (subject && number) return `${subject} ${number}`;
-  return pickFirst(course, ["courseCode", "subjectDescription"], "Course");
-}
-
-function getSection(course) {
-  return pickFirst(
-    course,
-    ["section", "classSection", "enrollmentSection", "sequenceNumber"],
-    ""
-  );
-}
-
-function getInstructor(course) {
-  return getInstructorName(course);
-}
-
-function getMeetings(course) {
-  const mf = Array.isArray(course?.meetingsFaculty) ? course.meetingsFaculty : [];
-  return mf.map((m) => m?.meetingTime || null).filter(Boolean);
-}
-
-function normalizeEvents(courses) {
-  const out = [];
-  for (const course of courses) {
-    const plannerId = course?._plannerId || "";
-    const code = courseCode(course);
-    const section = getSection(course);
-    const instructor = getInstructor(course);
-    const title = pickFirst(course, ["title", "courseTitle", "subjectTitle"], "");
-    const { start: rangeStart, end: rangeEnd } = getCourseDateRange(course);
-    const meetings = getMeetings(course);
-
-    for (let idx = 0; idx < meetings.length; idx += 1) {
-      const mt = meetings[idx];
-      const start = toMinutes(mt.beginTime);
-      const end = toMinutes(mt.endTime);
-      if (start == null || end == null || end <= start) continue;
-
-      const meetingStart = parseCourseDate(mt.startDate) || rangeStart;
-      const meetingEnd = parseCourseDate(mt.endDate) || rangeEnd;
-      const activeStart = meetingStart || rangeStart;
-      const activeEnd = meetingEnd || rangeEnd;
-
-      const building = mt.buildingDescription || mt.building || "";
-      const room = mt.room || "";
-      const location =
-        building && room
-          ? `${building} ${room}`
-          : building || (room ? `Room ${room}` : "") || "Location TBA";
-      const sectionType = mt.meetingTypeDescription || mt.meetingType || "Class";
-      const dayKeys = [
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday",
-      ];
-
-      for (const dayKey of dayKeys) {
-        if (!mt?.[dayKey]) continue;
-        out.push({
-          id: `${plannerId}-${idx}-${dayKey}-${start}-${end}`,
-          dayKey,
-          start,
-          end,
-          code,
-          section,
-          instructor,
-          title,
-          sectionType,
-          location,
-          rangeStart: activeStart,
-          rangeEnd: activeEnd,
-        });
-      }
-    }
-  }
-  return out;
-}
-
 function CourseChip({ course, termKey, onRemoveCourse }) {
-  const code = courseCode(course);
-  const section = getSection(course);
-  const instructor = getInstructor(course);
+  const code = getCourseCode(course);
+  const section = getCourseSection(course);
+  const instructor = getInstructorName(course);
   const id = course?._plannerId || `${code}-${section}`;
   const { start, end } = getCourseDateRange(course);
   const dateLabel = start && end ? formatDateRange(start, end) : null;
@@ -180,111 +80,9 @@ function CourseChip({ course, termKey, onRemoveCourse }) {
   );
 }
 
-function roundDownToHour(minutes) {
-  return Math.floor(minutes / 60) * 60;
-}
-
-function roundUpToHour(minutes) {
-  return Math.ceil(minutes / 60) * 60;
-}
-
-function getTimeRangeForEvents(events) {
-  if (!events.length) {
-    return {
-      startMinutes: DEFAULT_START_MINUTES,
-      endMinutes: DEFAULT_END_MINUTES,
-      totalMinutes: DEFAULT_END_MINUTES - DEFAULT_START_MINUTES,
-    };
-  }
-
-  let minStart = Math.min(...events.map((ev) => ev.start));
-  let maxEnd = Math.max(...events.map((ev) => ev.end));
-
-  minStart = roundDownToHour(Math.max(DEFAULT_START_MINUTES, minStart - 5));
-  maxEnd = roundUpToHour(Math.min(DEFAULT_END_MINUTES, maxEnd + 5));
-
-  if (maxEnd <= minStart) {
-    maxEnd = minStart + 60;
-  }
-
-  return {
-    startMinutes: minStart,
-    endMinutes: maxEnd,
-    totalMinutes: maxEnd - minStart,
-  };
-}
-
-function eventsOverlap(a, b) {
-  return a.start < b.end && b.start < a.end;
-}
-
-/** Assign side-by-side columns for concurrent classes; back-to-back classes share a column. */
-function layoutDayEvents(dayEvents) {
-  if (!dayEvents.length) return [];
-
-  const sorted = [...dayEvents].sort((a, b) => a.start - b.start || a.end - b.end);
-  const clusters = [];
-  let cluster = [];
-  let clusterEnd = -1;
-
-  for (const ev of sorted) {
-    if (!cluster.length || ev.start < clusterEnd) {
-      cluster.push(ev);
-      clusterEnd = Math.max(clusterEnd, ev.end);
-    } else {
-      clusters.push(cluster);
-      cluster = [ev];
-      clusterEnd = ev.end;
-    }
-  }
-  if (cluster.length) clusters.push(cluster);
-
-  const laidOut = [];
-
-  for (const group of clusters) {
-    const columns = [];
-
-    for (const ev of group) {
-      let placedColumn = -1;
-      for (let col = 0; col < columns.length; col += 1) {
-        const hasOverlap = columns[col].some((other) => eventsOverlap(other, ev));
-        if (!hasOverlap) {
-          placedColumn = col;
-          break;
-        }
-      }
-      if (placedColumn === -1) {
-        placedColumn = columns.length;
-        columns.push([]);
-      }
-      columns[placedColumn].push(ev);
-    }
-
-    const totalColumns = columns.length;
-    for (let col = 0; col < columns.length; col += 1) {
-      for (const ev of columns[col]) {
-        laidOut.push({ ev, column: col, totalColumns });
-      }
-    }
-  }
-
-  return laidOut;
-}
-
-function formatTimeRangeShort(start, end) {
-  return `${toTimeLabel(start)}–${toTimeLabel(end)}`;
-}
-
-/** comfortable = full lines; compact = merged meta; tight = minimal padding for ~50 min blocks */
-function getEventCardDensity(durationMinutes, heightPct) {
-  if (durationMinutes >= 100 || heightPct >= 13) return "comfortable";
-  if (durationMinutes >= 65 || heightPct >= 8) return "compact";
-  return "tight";
-}
-
 function PlannerEventBlock({ ev, density, style, title }) {
   const codeLine = `${ev.code}${ev.section ? ` ${ev.section}` : ""}`;
-  const timeLine = formatTimeRangeShort(ev.start, ev.end);
+  const timeLine = formatTimeRangeFromMinutes(ev.start, ev.end);
   const locationLine = ev.location || "Location TBA";
 
   const shellClass =
@@ -482,7 +280,7 @@ function WeeklyScheduleGrid({ weekStart, events }) {
                   top: `${((minute - timeRange.startMinutes) / timeRange.totalMinutes) * 100}%`,
                 }}
               >
-                {toTimeLabel(minute)}
+                {formatMinutesAmPm(minute)}
               </div>
             ))}
           </div>
@@ -518,22 +316,13 @@ function WeeklyScheduleGrid({ weekStart, events }) {
                   const { topPct, heightPct, density } = eventPosition(ev);
                   const widthPct = 100 / totalColumns;
                   const leftPct = column * widthPct;
-                  const tooltip = [
-                    `${ev.code}${ev.section ? ` ${ev.section}` : ""}`,
-                    formatTimeRangeShort(ev.start, ev.end),
-                    ev.sectionType,
-                    ev.location,
-                    ev.instructor,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ");
 
                   return (
                     <PlannerEventBlock
                       key={ev.id}
                       ev={ev}
                       density={density}
-                      title={tooltip}
+                      title={buildEventTooltip(ev)}
                       style={{
                         top: `calc(${topPct}% + ${EVENT_GAP_PX / 2}px)`,
                         height: `calc(${heightPct}% - ${EVENT_GAP_PX}px)`,
@@ -569,7 +358,7 @@ export default function WeeklyPlanner({
   onRemoveCourse,
 }) {
   const plannedCourses = plannerByTerm[activePlannerTerm] || [];
-  const events = useMemo(() => normalizeEvents(plannedCourses), [plannedCourses]);
+  const events = useMemo(() => normalizePlannerEvents(plannedCourses), [plannedCourses]);
   const bounds = useMemo(
     () => getPlannerBounds(plannedCourses, activePlannerTerm),
     [plannedCourses, activePlannerTerm]
@@ -634,7 +423,7 @@ export default function WeeklyPlanner({
             <div className="flex flex-wrap gap-2">
               {plannedCourses.map((course) => (
                 <CourseChip
-                  key={course?._plannerId || courseCode(course)}
+                  key={course?._plannerId || getCourseCode(course)}
                   course={course}
                   termKey={activePlannerTerm}
                   onRemoveCourse={onRemoveCourse}

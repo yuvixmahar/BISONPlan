@@ -1,15 +1,15 @@
 import httpx
 
 from ..config import BASE_URL, HEADERS, aurora_cookies
+from ..utils.aurora_data import json_list
 from ..utils.html_parser import parse_description_html
 
 
-def _client_with_defaults() -> httpx.AsyncClient:
-    # Centralize request defaults per spec.
+def make_client(timeout: float = 30) -> httpx.AsyncClient:
     return httpx.AsyncClient(
         cookies=aurora_cookies(),
         headers=HEADERS,
-        timeout=30,
+        timeout=timeout,
     )
 
 
@@ -121,12 +121,7 @@ async def fetch_subjects(
         params=params,
     )
     r.raise_for_status()
-    payload = r.json()
-    if isinstance(payload, list):
-        return payload
-    if isinstance(payload, dict) and isinstance(payload.get("data"), list):
-        return payload["data"]
-    return []
+    return json_list(r.json())
 
 
 async def fetch_terms(
@@ -141,17 +136,5 @@ async def fetch_terms(
         params={"searchTerm": search_term, "offset": offset, "max": max_items},
     )
     r.raise_for_status()
-
-    payload = r.json()
-    # Depending on Aurora response shape, this may be a list already.
-    if isinstance(payload, list):
-        return payload
-    if isinstance(payload, dict) and "data" in payload and isinstance(payload["data"], list):
-        return payload["data"]
-    return []
-
-
-# Optional convenience for callers that don't already have a client.
-def make_client() -> httpx.AsyncClient:
-    return _client_with_defaults()
+    return json_list(r.json())
 

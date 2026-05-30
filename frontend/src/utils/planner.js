@@ -1,3 +1,6 @@
+import { getCourseSection, getMeetingTimes, pickFirst, PLANNER_DAY_KEYS } from "./course.js";
+import { toMinutes } from "./time.js";
+
 export const PLANNER_TERMS = [
   { key: "fall", label: "Fall" },
   { key: "winter", label: "Winter" },
@@ -44,13 +47,10 @@ export function parseCourseDate(value) {
 }
 
 export function getCourseDateRange(course) {
-  const mf = Array.isArray(course?.meetingsFaculty) ? course.meetingsFaculty : [];
   let start = null;
   let end = null;
 
-  for (const entry of mf) {
-    const mt = entry?.meetingTime;
-    if (!mt) continue;
+  for (const mt of getMeetingTimes(course)) {
     const meetingStart = parseCourseDate(mt.startDate);
     const meetingEnd = parseCourseDate(mt.endDate);
     if (meetingStart && (!start || meetingStart < start)) start = meetingStart;
@@ -75,22 +75,6 @@ export function formatDateRange(start, end) {
     year: "numeric",
   });
   return `${startLabel} – ${endLabel}`;
-}
-
-export function formatMonthSpan(start, end) {
-  if (!start || !end) return "Unknown dates";
-
-  const startMonth = start.toLocaleDateString("en-US", { month: "short" });
-  const endMonth = end.toLocaleDateString("en-US", { month: "short" });
-  if (startMonth === endMonth) return startMonth;
-  return `${startMonth} – ${endMonth}`;
-}
-
-export function dateRangeKey(start, end) {
-  if (!start || !end) return "unknown";
-  const fmt = (date) =>
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-  return `${fmt(start)}_${fmt(end)}`;
 }
 
 export function dateRangesOverlap(a, b) {
@@ -212,21 +196,49 @@ export function formatWeekNavLabel(weekStart) {
   return `${startLabel} – ${endLabel}`;
 }
 
-export function groupCoursesByDateRange(courses) {
-  const groups = new Map();
+export function getCourseIdentity(course) {
+  const crn = pickFirst(course, ["courseReferenceNumber", "crn"]);
+  if (crn) return `crn:${crn}`;
+  const subject = pickFirst(course, ["subjectCode", "subject", "subj", "courseCode"], "course");
+  const number = pickFirst(course, ["courseNumber", "courseNbr", "courseNum", "catalogNumber"], "");
+  const section = getCourseSection(course);
+  return `${subject}-${number}-${section}`;
+}
 
-  for (const course of courses) {
-    const range = getCourseDateRange(course);
-    const key = dateRangeKey(range.start, range.end);
-    if (!groups.has(key)) {
-      groups.set(key, { key, range, courses: [] });
+export function listMeetingSlots(course) {
+  const slots = [];
+  for (const mt of getMeetingTimes(course)) {
+    const start = toMinutes(mt.beginTime);
+    const end = toMinutes(mt.endTime);
+    if (start == null || end == null || end <= start) continue;
+    for (const day of PLANNER_DAY_KEYS) {
+      if (mt?.[day]) slots.push({ day, start, end });
     }
-    groups.get(key).courses.push(course);
   }
+  return slots;
+}
 
-  return Array.from(groups.values()).sort((a, b) => {
-    if (!a.range.start || !b.range.start) return 1;
-    if (!b.range.start) return -1;
-    return a.range.start - b.range.start;
-  });
+export function findPlannerConflict(existingCourses, nextCourse, termKey) {
+  const nextSlots = listMeetingSlots(nextCourse);
+  if (!nextSlots.length) return null;
+  const nextDateRange = getCourseDateRange(nextCourse);
+
+  for (const existing of existingCourses) {
+    if (
+      termKey === "summer" &&
+      !dateRangesOverlap(getCourseDateRange(existing), nextDateRange)
+    ) {
+      continue;
+    }
+
+    const existingSlots = listMeetingSlots(existing);
+    for (const a of nextSlots) {
+      for (const b of existingSlots) {
+        if (a.day !== b.day) continue;
+        const overlaps = a.start < b.end && b.start < a.end;
+        if (overlaps) return existing;
+      }
+    }
+  }
+  return null;
 }
