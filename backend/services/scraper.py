@@ -6,6 +6,7 @@ import httpx
 from ..cache import cache
 from ..services.aurora import fetch_courses, fetch_description, init_term_session, make_client
 from ..services.description import empty_course_detail, merge_course_with_description
+from ..utils.text import decode_aurora_strings
 
 
 async def scrape_subject(
@@ -25,7 +26,7 @@ async def scrape_subject(
 
     async with make_client() as client:
         await init_term_session(client, term)
-        courses = await fetch_courses(client, subject, term)
+        courses = [decode_aurora_strings(course) for course in await fetch_courses(client, subject, term)]
 
         if not include_descriptions:
             detail = empty_course_detail()

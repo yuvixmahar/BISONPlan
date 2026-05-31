@@ -11,7 +11,7 @@ Built for students who want to explore courses, compare sections, and sketch out
 - **Live Aurora data** — terms, departments, sections, and seats are fetched in real time from U of M registration.
 - **Term and subject pickers** — paginated dropdowns with search, matching Aurora’s lookup behavior.
 - **Rich filtering** — narrow by credits, campus, delivery mode, schedule type, day of week, time of day, and instructor; toggle full classes and waitlist-only sections.
-- **Text search** — filter the loaded section list by course code, title, or instructor.
+- **Text search** — filter the loaded section list by course code or title (use the instructor filter for professor names).
 - **Seat badges** — open, waitlist, and full status at a glance.
 - **Quick View drawer** — meeting times, locations, instructors, dates, and section notes without leaving the list.
 - **Prerequisites and corequisites** — loaded on demand in Aurora’s own wording to avoid misinformation.
@@ -20,9 +20,9 @@ Built for students who want to explore courses, compare sections, and sketch out
 ### Weekly Planner
 
 - **Add from search** — send any section to your Fall, Winter, or Summer planner in one click.
-- **Weekly grid** — visualize meeting blocks on a Mon–Sun timetable (8 AM–10 PM).
+- **Week-by-week calendar** — browse from the first to last class date with previous/next week navigation.
+- **Weekly grid** — visualize meeting blocks on a Mon–Sun timetable with a dynamic time range.
 - **Conflict detection** — overlapping meeting times are blocked before a course is added; summer terms also respect non-overlapping date ranges.
-- **Summer timeline** — summer courses with different start/end dates are grouped and shown on a date timeline above the grid.
 - **Per-term planners** — keep separate draft schedules for Fall, Winter, and Summer.
 
 ## Tech Stack

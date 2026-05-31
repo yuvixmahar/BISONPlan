@@ -31,6 +31,9 @@ pnpm-debug.log*
 # Cursor misc
 .cursor/
 
+# Local-only production readiness tracker (not for GitHub)
+PRODUCTION-READINESS.md
+
 # Editor / OS junk
 .vscode/
 .idea/
