@@ -1,4 +1,5 @@
 from ..services.prereq_parser import parse_prereq
+from ..utils.text import decode_aurora_strings
 
 
 def build_combined_prereq_raw(
@@ -20,14 +21,16 @@ def build_course_detail(parsed_desc: dict) -> dict:
     combined_raw = build_combined_prereq_raw(prerequisites_raw, corequisites_raw)
     parsed = parse_prereq(combined_raw or "")
 
-    return {
-        "description": parsed_desc.get("description") or "",
-        "prerequisites_raw": prerequisites_raw,
-        "corequisites_raw": corequisites_raw,
-        "prerequisites": parsed.get("prerequisites") or [],
-        "corequisites": parsed.get("corequisites") or [],
-        "note": parsed.get("note"),
-    }
+    return decode_aurora_strings(
+        {
+            "description": parsed_desc.get("description") or "",
+            "prerequisites_raw": prerequisites_raw,
+            "corequisites_raw": corequisites_raw,
+            "prerequisites": parsed.get("prerequisites") or [],
+            "corequisites": parsed.get("corequisites") or [],
+            "note": parsed.get("note"),
+        }
+    )
 
 
 def empty_course_detail() -> dict:
@@ -35,4 +38,4 @@ def empty_course_detail() -> dict:
 
 
 def merge_course_with_description(course: dict, parsed_desc: dict) -> dict:
-    return {**course, **build_course_detail(parsed_desc)}
+    return decode_aurora_strings({**course, **build_course_detail(parsed_desc)})

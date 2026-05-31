@@ -7,6 +7,7 @@ import {
   getCourseTitle,
   getInstructorName,
   getMeetingDayLabels,
+  getMeetingLocation,
   getMeetingsWithFaculty,
   splitSectionInfo,
 } from "../utils/course.js";
@@ -96,8 +97,7 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
                 {meetings.map(({ meetingTime: mt, instructor: meetingInstructor }, idx) => {
                   const days = getMeetingDayLabels(mt).join(" ");
                   const time = formatTimeRangeFromHhmm(mt.beginTime, mt.endTime);
-                  const building = mt.buildingDescription || mt.building || "TBA";
-                  const room = mt.room || "TBA";
+                  const location = getMeetingLocation(mt);
                   const type = mt.meetingTypeDescription || mt.meetingType || "Class";
                   return (
                     <div key={`${idx}-${mt.beginTime}-${mt.endTime}`} className="border border-slate-200 rounded-lg p-3">
@@ -113,8 +113,7 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
                         {meetingInstructor || instructor || "TBA"}
                       </div>
                       <div className="text-sm text-slate-700">
-                        <span className="font-medium">Location:</span> {building}{" "}
-                        {room !== "TBA" ? `• Room ${room}` : ""}
+                        <span className="font-medium">Location:</span> {location}
                       </div>
                       <div className="text-sm text-slate-700">
                         <span className="font-medium">Dates:</span> {mt.startDate || "?"} - {mt.endDate || "?"}

@@ -1,3 +1,6 @@
+from .text import decode_html_entities
+
+
 def json_list(payload) -> list:
     if isinstance(payload, list):
         return payload
@@ -14,8 +17,8 @@ def normalize_subject_items(page: list) -> list[dict[str, str]]:
         code = item.get("code")
         if not code:
             continue
-        description = item.get("description") or code
-        normalized.append({"code": str(code), "description": str(description)})
+        description = decode_html_entities(str(item.get("description") or code))
+        normalized.append({"code": str(code), "description": description})
     return normalized
 
 
@@ -33,7 +36,7 @@ def normalize_term_items(page: list) -> list[dict[str, str]]:
         normalized.append(
             {
                 "code": str(term_code),
-                "description": str(label or term_code),
+                "description": decode_html_entities(str(label or term_code)),
             }
         )
     return normalized

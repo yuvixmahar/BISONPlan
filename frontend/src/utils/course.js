@@ -1,8 +1,25 @@
+export function decodeHtmlEntities(value) {
+  if (typeof value !== "string" || !value || !value.includes("&")) return value;
+  if (typeof document === "undefined") {
+    return value
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+  }
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = value;
+  return textarea.value;
+}
+
 export function pickFirst(obj, keys, fallback = "") {
   for (const k of keys) {
-    if (obj && obj[k] != null && obj[k] !== "") return obj[k];
+    if (obj && obj[k] != null && obj[k] !== "") {
+      return decodeHtmlEntities(String(obj[k]));
+    }
   }
-  return fallback;
+  return typeof fallback === "string" ? decodeHtmlEntities(fallback) : fallback;
 }
 
 export const MEETING_DAY_ENTRIES = [
@@ -88,8 +105,10 @@ export function formatMeetingDayLabels(meetingTime) {
 }
 
 export function getMeetingLocation(meetingTime) {
-  const building = meetingTime?.buildingDescription || meetingTime?.building || "";
-  const room = meetingTime?.room || "";
+  const building = decodeHtmlEntities(
+    meetingTime?.buildingDescription || meetingTime?.building || ""
+  );
+  const room = decodeHtmlEntities(meetingTime?.room || "");
   if (building && room) return `${building} ${room}`;
   if (building) return building;
   if (room) return `Room ${room}`;
@@ -114,7 +133,7 @@ function formatFacultyName(faculty) {
     const names = faculty.map(formatFacultyName).filter(Boolean);
     return [...new Set(names)].join(", ");
   }
-  if (typeof faculty === "string") return faculty.trim();
+  if (typeof faculty === "string") return decodeHtmlEntities(faculty.trim());
   const direct = pickFirst(faculty, ["displayName", "name", "preferredName"], "");
   if (direct) return direct;
   const combined = `${faculty.firstName || ""} ${faculty.lastName || ""}`.trim();
@@ -182,7 +201,7 @@ export function getMeetingsWithFaculty(course) {
 }
 
 export function splitSectionInfo(rawText) {
-  const raw = (rawText || "").trim();
+  const raw = decodeHtmlEntities((rawText || "").trim());
   if (!raw) return { main: "", sectionInfo: "" };
   const marker = /section information text\s*:/i;
   const parts = raw.split(marker);
