@@ -1,4 +1,11 @@
+import os
+
 BASE_URL = "https://aurora-registration.umanitoba.ca/StudentRegistrationSsb/ssb"
+
+
+def cors_origins() -> list[str]:
+    raw = os.getenv("CORS_ORIGINS", "http://localhost:5173")
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 TERMS = {
     "summer_2026": "202650",

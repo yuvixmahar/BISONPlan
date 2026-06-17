@@ -28,6 +28,13 @@ pnpm-debug.log*
 *.db
 *.sqlite3
 
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+
 # Cursor misc
 .cursor/
 
