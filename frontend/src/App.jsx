@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CourseSearch from "./pages/CourseSearch.jsx";
 import WeeklyPlanner from "./components/WeeklyPlanner.jsx";
 import PlannerToast from "./components/PlannerToast.jsx";
@@ -9,6 +9,7 @@ import {
   normalizePlannerTerm,
   PLANNER_TERMS,
 } from "./utils/planner.js";
+import { loadPlannerState, savePlannerState } from "./utils/plannerStorage.js";
 
 function getTermLabel(termKey) {
   return PLANNER_TERMS.find((term) => term.key === termKey)?.label || termKey;
@@ -16,10 +17,15 @@ function getTermLabel(termKey) {
 
 export default function App() {
   const [page, setPage] = useState("search");
+  const [plannerInit] = useState(() => loadPlannerState());
   const [activePlannerTerm, setActivePlannerTerm] = useState("fall");
-  const [plannerByTerm, setPlannerByTerm] = useState({ fall: [], winter: [], summer: [] });
+  const [plannerByTerm, setPlannerByTerm] = useState(() => plannerInit.plannerByTerm);
   const [plannerNotice, setPlannerNotice] = useState(null);
-  const [plannerIdSeed, setPlannerIdSeed] = useState(1);
+  const [plannerIdSeed, setPlannerIdSeed] = useState(() => plannerInit.plannerIdSeed);
+
+  useEffect(() => {
+    savePlannerState(plannerByTerm, plannerIdSeed);
+  }, [plannerByTerm, plannerIdSeed]);
 
   function addCourseToPlanner(course, termKey) {
     const key = normalizePlannerTerm(termKey);
