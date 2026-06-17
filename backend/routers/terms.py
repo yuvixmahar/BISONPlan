@@ -3,7 +3,7 @@ from fastapi import APIRouter, Query
 from ..services.aurora import fetch_terms, make_client
 from ..utils.api_response import api_response
 from ..utils.aurora_data import normalize_term_items
-from ..utils.errors import AURORA_ERRORS
+from ..utils.errors import AURORA_ERRORS, aurora_unavailable_error
 from ..utils.pagination import paginated_page
 
 router = APIRouter()
@@ -30,10 +30,5 @@ async def get_terms(
             None,
             paginated_page(normalize_term_items(page), offset, max),
         )
-    except AURORA_ERRORS:
-        return api_response(
-            True,
-            "stale",
-            None,
-            paginated_page([], offset, max),
-        )
+    except AURORA_ERRORS as e:
+        raise aurora_unavailable_error("fetching terms", e)
