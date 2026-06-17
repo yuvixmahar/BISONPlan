@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCourseCode, getInstructorName } from "../utils/course.js";
 import { hasDay, inTimeWindow } from "../utils/courseFilters.js";
 import { getSubjects, getTerms } from "../api/client.js";
@@ -7,8 +7,10 @@ import FilterPanel from "../components/FilterPanel.jsx";
 import SearchBar from "../components/SearchBar.jsx";
 import CourseList from "../components/CourseList.jsx";
 import StaleBanner from "../components/StaleBanner.jsx";
+import LoadErrorBanner from "../components/LoadErrorBanner.jsx";
 import QuickViewDrawer from "../components/QuickViewDrawer.jsx";
 import { plannerTermFromTermDescription } from "../utils/planner.js";
+import { getApiErrorMessage } from "../utils/apiError.js";
 
 function toMinutesAgo(cachedAtSeconds) {
   if (!cachedAtSeconds) return null;
@@ -27,6 +29,7 @@ export default function CourseSearch({
   const [termsOffset, setTermsOffset] = useState(1);
   const [termsHasMore, setTermsHasMore] = useState(false);
   const [termsLoading, setTermsLoading] = useState(false);
+  const [termsError, setTermsError] = useState("");
   const [termMenuOpen, setTermMenuOpen] = useState(false);
   const termMenuRef = useRef(null);
 
@@ -36,6 +39,7 @@ export default function CourseSearch({
   const [subjectOffset, setSubjectOffset] = useState(1);
   const [subjectHasMore, setSubjectHasMore] = useState(false);
   const [subjectLoading, setSubjectLoading] = useState(false);
+  const [subjectsError, setSubjectsError] = useState("");
   const [subjectMenuOpen, setSubjectMenuOpen] = useState(false);
   const [subjectSessionId, setSubjectSessionId] = useState("");
   const [subjectActiveIndex, setSubjectActiveIndex] = useState(-1);
@@ -61,20 +65,50 @@ export default function CourseSearch({
     setQuickViewCourse(null);
   }, [isActive]);
 
-  useEffect(() => {
-    async function runInitialTerms() {
-      setTermsLoading(true);
-      try {
-        const json = await getTerms(1, 10, "");
-        const pageItems = json?.data?.items || [];
-        setTerms(pageItems);
-        setTermsHasMore(Boolean(json?.data?.has_more));
-        setTermsOffset(json?.data?.next_offset || 2);
-      } finally {
-        setTermsLoading(false);
-      }
+  const loadInitialTerms = useCallback(async () => {
+    setTermsLoading(true);
+    setTermsError("");
+    try {
+      const json = await getTerms(1, 10, "");
+      const pageItems = json?.data?.items || [];
+      setTerms(pageItems);
+      setTermsHasMore(Boolean(json?.data?.has_more));
+      setTermsOffset(json?.data?.next_offset || 2);
+    } catch (error) {
+      setTerms([]);
+      setTermsHasMore(false);
+      setTermsError(getApiErrorMessage(error, "Failed to load terms. Aurora may be unreachable."));
+    } finally {
+      setTermsLoading(false);
     }
-    runInitialTerms();
+  }, []);
+
+  useEffect(() => {
+    loadInitialTerms();
+  }, [loadInitialTerms]);
+
+  const loadInitialSubjects = useCallback(async (selectedTermCode) => {
+    setSubjectLoading(true);
+    setSubjectsError("");
+    const nextSession = `bp-${selectedTermCode}-${Date.now()}`;
+    setSubjectSessionId(nextSession);
+    try {
+      const json = await getSubjects(selectedTermCode, "", 1, 10, nextSession);
+      const items = json?.data?.items || [];
+      setSubjects(items);
+      setSubjectHasMore(Boolean(json?.data?.has_more));
+      setSubjectOffset(json?.data?.next_offset || 2);
+      setSubject("");
+      setSubjectInput("");
+    } catch (error) {
+      setSubjects([]);
+      setSubjectHasMore(false);
+      setSubjectsError(
+        getApiErrorMessage(error, "Failed to load departments. Aurora may be unreachable.")
+      );
+    } finally {
+      setSubjectLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -85,32 +119,16 @@ export default function CourseSearch({
       setSubjectMenuOpen(false);
       setSubjectOffset(1);
       setSubjectHasMore(false);
+      setSubjectsError("");
       return;
     }
-    async function runInitialSubjects() {
-      setSubjectLoading(true);
-      const nextSession = `bp-${termCode}-${Date.now()}`;
-      setSubjectSessionId(nextSession);
-      try {
-        const json = await getSubjects(termCode, "", 1, 10, nextSession);
-        const items = json?.data?.items || [];
-        setSubjects(items);
-        setSubjectHasMore(Boolean(json?.data?.has_more));
-        setSubjectOffset(json?.data?.next_offset || 2);
-        // Do not auto-select a department on refresh/term change.
-        setSubject("");
-        setSubjectInput("");
-      } finally {
-        setSubjectLoading(false);
-      }
-    }
-    runInitialSubjects();
-  }, [termCode]);
+    loadInitialSubjects(termCode);
+  }, [termCode, loadInitialSubjects]);
 
   const { data: courses, loading, error, isStale, cachedAt } = useCourses(subject, termCode);
 
   async function loadMoreTerms() {
-    if (termsLoading || !termsHasMore) return;
+    if (termsLoading || !termsHasMore || termsError) return;
     setTermsLoading(true);
     try {
       const json = await getTerms(termsOffset, 10, "");
@@ -128,6 +146,8 @@ export default function CourseSearch({
       });
       setTermsHasMore(Boolean(json?.data?.has_more));
       setTermsOffset(json?.data?.next_offset || termsOffset + 1);
+    } catch (error) {
+      setTermsError(getApiErrorMessage(error, "Failed to load more terms."));
     } finally {
       setTermsLoading(false);
     }
@@ -158,6 +178,7 @@ export default function CourseSearch({
   async function fetchSubjectPage(searchText, offset, append) {
     if (!termCode) return;
     setSubjectLoading(true);
+    if (!append) setSubjectsError("");
     try {
       const json = await getSubjects(
         termCode,
@@ -182,6 +203,14 @@ export default function CourseSearch({
       setSubjectHasMore(Boolean(json?.data?.has_more));
       setSubjectOffset(json?.data?.next_offset || offset + 1);
       setSubjectActiveIndex(items.length ? 0 : -1);
+    } catch (error) {
+      if (!append) {
+        setSubjects([]);
+        setSubjectHasMore(false);
+      }
+      setSubjectsError(
+        getApiErrorMessage(error, "Failed to load departments. Aurora may be unreachable.")
+      );
     } finally {
       setSubjectLoading(false);
     }
@@ -370,6 +399,16 @@ export default function CourseSearch({
       <StaleBanner isStale={isStale} cachedAtMinutesAgo={cachedAtMinutesAgo} />
 
       <div className="max-w-6xl mx-auto px-4 py-6">
+        {termsError ? (
+          <div className="mb-4">
+            <LoadErrorBanner
+              title="Could not load terms"
+              message={termsError}
+              onRetry={loadInitialTerms}
+            />
+          </div>
+        ) : null}
+
         <div>
           <div>
             <div className="font-heading text-3xl">Course Search</div>
@@ -440,6 +479,15 @@ export default function CourseSearch({
 
           <div className="md:col-span-2">
             <label className="text-xs text-slate-600">Subject</label>
+            {subjectsError ? (
+              <div className="mt-1 mb-2">
+                <LoadErrorBanner
+                  title="Could not load departments"
+                  message={subjectsError}
+                  onRetry={() => loadInitialSubjects(termCode)}
+                />
+              </div>
+            ) : null}
             <div className="relative" ref={subjectMenuRef}>
               <input
                 value={subjectInput}
