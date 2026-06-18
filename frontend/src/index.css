@@ -20,7 +20,6 @@
 
 html {
   background-color: var(--color-bison-brown);
-  overscroll-behavior-y: none;
 }
 
 body {
@@ -32,8 +31,6 @@ body {
 
 #root {
   min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
 }
 
 .font-heading {
