@@ -22,7 +22,7 @@ def test_budget_blocks_after_daily_cap(monkeypatch):
     assert exc.value.reason == "daily_cap"
 
 
-def test_budget_snooze_blocks_overnight(monkeypatch):
+def test_budget_allows_requests_during_quiet_hours(monkeypatch):
     from datetime import datetime
 
     monkeypatch.setattr(
@@ -38,28 +38,47 @@ def test_budget_snooze_blocks_overnight(monkeypatch):
         ),
     )
     budget = AuroraBudget()
-    with pytest.raises(AuroraBudgetBlocked) as exc:
-        budget.assert_can_request()
-    assert exc.value.reason == "snooze"
+    budget.assert_can_request()
 
 
-def test_budget_allows_active_hours(monkeypatch):
+def test_quiet_hours_use_longer_cache_ttl(monkeypatch):
     from datetime import datetime
 
     monkeypatch.setattr(
-        "backend.services.aurora_budget.datetime",
+        "backend.config.datetime",
         type(
             "DT",
             (),
             {
                 "now": staticmethod(
-                    lambda tz: datetime(2026, 6, 17, 12, 0, tzinfo=tz)
+                    lambda tz: datetime(2026, 6, 17, 2, 0, tzinfo=tz)
                 )
             },
         ),
     )
-    budget = AuroraBudget()
-    budget.assert_can_request()
+    from backend.config import cache_ttl_seconds
+
+    assert cache_ttl_seconds() == 1800
+
+
+def test_daytime_cache_ttl_is_ten_minutes(monkeypatch):
+    from datetime import datetime
+
+    monkeypatch.setattr(
+        "backend.config.datetime",
+        type(
+            "DT",
+            (),
+            {
+                "now": staticmethod(
+                    lambda tz: datetime(2026, 6, 17, 14, 0, tzinfo=tz)
+                )
+            },
+        ),
+    )
+    from backend.config import cache_ttl_seconds
+
+    assert cache_ttl_seconds() == 600
 
 
 def test_default_daily_budget_is_1300(monkeypatch):
