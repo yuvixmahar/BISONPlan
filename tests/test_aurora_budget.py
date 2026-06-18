@@ -1,6 +1,4 @@
-import pytest
-
-from backend.services.aurora_budget import AuroraBudget, AuroraBudgetBlocked
+from backend.services.aurora_budget import AuroraBudget
 
 
 def test_budget_allows_requests_under_cap(monkeypatch):
