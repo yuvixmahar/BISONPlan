@@ -12,14 +12,13 @@ def test_budget_allows_requests_under_cap(monkeypatch):
     assert budget.used() == 5
 
 
-def test_budget_blocks_after_daily_cap(monkeypatch):
+def test_budget_gate_disabled(monkeypatch):
+    # Budget cap is intentionally disabled; assert_can_request must never raise.
     monkeypatch.setattr("backend.services.aurora_budget.AURORA_DAILY_BUDGET", 2)
     budget = AuroraBudget()
     budget.record_request()
     budget.record_request()
-    with pytest.raises(AuroraBudgetBlocked) as exc:
-        budget.assert_can_request()
-    assert exc.value.reason == "daily_cap"
+    budget.assert_can_request()  # should not raise even though count >= budget
 
 
 def test_budget_allows_requests_during_quiet_hours(monkeypatch):

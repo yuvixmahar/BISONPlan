@@ -45,7 +45,7 @@ test.describe("BISONplan", () => {
     await selectFallTerm(page);
     await selectCompSubject(page);
 
-    await expect(page.getByText("COMP 1010")).toBeVisible();
+    await expect(page.getByText("COMP 1010").first()).toBeVisible();
     await page.getByRole("button", { name: "Add to Planner" }).click();
 
     await expect(page.getByRole("status")).toContainText("COMP 1010");
