@@ -1,6 +1,7 @@
+from unittest.mock import AsyncMock, patch
+
 import httpx
 import pytest
-from unittest.mock import AsyncMock, patch
 
 from backend.utils.errors import AURORA_ERRORS
 

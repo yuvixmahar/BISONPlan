@@ -1,7 +1,6 @@
-import pytest
 
-from backend.utils.pagination import paginated_page
 from backend.utils.aurora_data import normalize_term_items
+from backend.utils.pagination import paginated_page
 
 
 def test_normalize_term_items_rejects_non_dict_rows():

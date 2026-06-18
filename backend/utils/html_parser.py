@@ -2,7 +2,6 @@ import re
 
 from bs4 import BeautifulSoup
 
-
 COURSE_DESCRIPTION_SELECTOR = {"aria-labelledby": "courseDescription"}
 
 

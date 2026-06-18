@@ -1,6 +1,6 @@
 import CourseCard from "./CourseCard.jsx";
 
-export default function CourseList({ courses, termCode, onQuickView, onAddToPlanner }) {
+export default function CourseList({ courses, termCode: _termCode, onQuickView, onAddToPlanner }) {
   return (
     <div className="flex flex-col gap-3">
       {courses.length === 0 ? (
