@@ -37,12 +37,8 @@ class AuroraBudget:
         return max(0, AURORA_DAILY_BUDGET - self._count)
 
     def assert_can_request(self) -> None:
-        self._reset_if_new_day()
-        if self._count >= AURORA_DAILY_BUDGET:
-            raise AuroraBudgetBlocked(
-                f"Daily Aurora request budget ({AURORA_DAILY_BUDGET}) reached. Cached data only until midnight CST.",
-                "daily_cap",
-            )
+        # Budget gate disabled — unlimited Aurora requests allowed in production.
+        pass
 
     def record_request(self) -> None:
         self._reset_if_new_day()
