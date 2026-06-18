@@ -4,7 +4,7 @@ export default function CourseList({ courses, termCode, onQuickView, onAddToPlan
   return (
     <div className="flex flex-col gap-3">
       {courses.length === 0 ? (
-        <div className="text-slate-600 bg-white border border-slate-200 rounded-lg p-4">
+        <div className="text-bison-text-muted bg-white border border-bison-border rounded-lg p-4">
           No courses match your filters.
         </div>
       ) : (

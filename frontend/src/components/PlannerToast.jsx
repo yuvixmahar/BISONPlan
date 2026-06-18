@@ -5,12 +5,12 @@ export const TOAST_DURATION_MS = 2500;
 
 const TONE_STYLES = {
   success: {
-    panel: "bg-emerald-50 border-emerald-200 text-emerald-900",
-    bar: "bg-emerald-500",
+    panel: "bg-bison-gold/15 border-bison-gold/50 text-bison-brown",
+    bar: "bg-bison-gold",
   },
   warning: {
-    panel: "bg-amber-50 border-amber-200 text-amber-900",
-    bar: "bg-amber-500",
+    panel: "bg-bison-gold/10 border-bison-gold/40 text-bison-brown",
+    bar: "bg-bison-gold-dark",
   },
   error: {
     panel: "bg-red-50 border-red-200 text-red-900",

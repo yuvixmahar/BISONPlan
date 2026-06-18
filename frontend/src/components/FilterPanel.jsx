@@ -22,20 +22,20 @@ export default function FilterPanel({
   onClearFilters,
 }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+    <div className="bg-white border border-bison-border rounded-xl p-4 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <div className="text-sm font-semibold text-slate-800">Filters</div>
+        <div className="text-sm font-semibold text-bison-brown">Filters</div>
         <button
           type="button"
           onClick={onClearFilters}
-          className="text-xs px-2 py-1 rounded-md border border-slate-200 hover:bg-slate-50"
+          className="text-xs px-2 py-1 rounded-md border border-bison-border hover:bg-bison-cream"
         >
           Reset
         </button>
       </div>
 
       <div className="flex flex-wrap gap-4 mb-4">
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-sm text-bison-text">
           <input
             type="checkbox"
             checked={includeFullClasses}
@@ -44,7 +44,7 @@ export default function FilterPanel({
           Include full classes
         </label>
 
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-sm text-bison-text">
           <input
             type="checkbox"
             checked={onlyWaitlisted}
@@ -56,11 +56,11 @@ export default function FilterPanel({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="lg:col-span-1">
-          <label className="block text-xs text-slate-600 mb-1">Credits</label>
+          <label className="block text-xs text-bison-text-muted mb-1">Credits</label>
           <select
             value={creditHour}
             onChange={(e) => setCreditHour(e.target.value)}
-            className="w-full border border-slate-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
+            className="w-full border border-bison-border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-bison-gold"
           >
             <option value="">Any</option>
             <option value="1">1 credit</option>
@@ -71,11 +71,11 @@ export default function FilterPanel({
         </div>
 
         <div className="lg:col-span-1">
-          <label className="block text-xs text-slate-600 mb-1">Schedule</label>
+          <label className="block text-xs text-bison-text-muted mb-1">Schedule</label>
           <select
             value={scheduleType}
             onChange={(e) => setScheduleType(e.target.value)}
-            className="w-full border border-slate-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
+            className="w-full border border-bison-border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-bison-gold"
           >
             <option value="any">Any</option>
             <option value="days">Has meeting times</option>
@@ -84,11 +84,11 @@ export default function FilterPanel({
         </div>
 
         <div className="lg:col-span-1">
-          <label className="block text-xs text-slate-600 mb-1">Campus</label>
+          <label className="block text-xs text-bison-text-muted mb-1">Campus</label>
           <select
             value={campus}
             onChange={(e) => setCampus(e.target.value)}
-            className="w-full border border-slate-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
+            className="w-full border border-bison-border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-bison-gold"
           >
             <option value="any">Any</option>
             {campusOptions.map((opt) => (
@@ -100,11 +100,11 @@ export default function FilterPanel({
         </div>
 
         <div className="lg:col-span-1">
-          <label className="block text-xs text-slate-600 mb-1">Delivery mode</label>
+          <label className="block text-xs text-bison-text-muted mb-1">Delivery mode</label>
           <select
             value={deliveryMode}
             onChange={(e) => setDeliveryMode(e.target.value)}
-            className="w-full border border-slate-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
+            className="w-full border border-bison-border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-bison-gold"
           >
             <option value="any">Any</option>
             {deliveryOptions.map((opt) => (
@@ -117,11 +117,11 @@ export default function FilterPanel({
 
         <div className="grid grid-cols-2 gap-2 lg:col-span-2">
           <div>
-            <label className="block text-xs text-slate-600 mb-1">Day</label>
+            <label className="block text-xs text-bison-text-muted mb-1">Day</label>
             <select
               value={dayFilter}
               onChange={(e) => setDayFilter(e.target.value)}
-              className="w-full border border-slate-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
+              className="w-full border border-bison-border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-bison-gold"
             >
               <option value="any">Any</option>
               <option value="M">Monday</option>
@@ -134,11 +134,11 @@ export default function FilterPanel({
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-600 mb-1">Time</label>
+            <label className="block text-xs text-bison-text-muted mb-1">Time</label>
             <select
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value)}
-              className="w-full border border-slate-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
+              className="w-full border border-bison-border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-bison-gold"
             >
               <option value="any">Any</option>
               <option value="morning">Morning</option>
@@ -149,12 +149,12 @@ export default function FilterPanel({
         </div>
 
         <div className="lg:col-span-2">
-          <label className="block text-xs text-slate-600 mb-1">Instructor</label>
+          <label className="block text-xs text-bison-text-muted mb-1">Instructor</label>
           <input
             value={instructorFilter}
             onChange={(e) => setInstructorFilter(e.target.value)}
             placeholder="e.g. Smith"
-            className="w-full border border-slate-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
+            className="w-full border border-bison-border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-bison-gold"
           />
         </div>
       </div>
