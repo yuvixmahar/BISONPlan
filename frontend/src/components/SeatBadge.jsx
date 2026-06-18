@@ -3,6 +3,7 @@ export default function SeatBadge({
   waitlistCount,
   seatsCapacity,
   waitlistCapacity,
+  boxed = false,
 }) {
   const seats = Number(seatsAvailable ?? 0);
   const waitlist = Number(waitlistCount ?? 0);
@@ -29,18 +30,32 @@ export default function SeatBadge({
     ? `${waitlist} waitlist`
     : "No waitlist";
 
+  if (boxed) {
+    return (
+      <div className="w-40 rounded-md border border-bison-border bg-white p-2 text-left">
+        <div className={`inline-flex text-[11px] font-semibold px-2 py-0.5 rounded border ${statusCls}`}>
+          {seatStatus === "full" ? "Class full" : seatStatus === "limited" ? "Limited seats" : "Open"}
+        </div>
+        <div className="mt-1 text-xs font-semibold text-bison-text">{seatLabel}</div>
+        <div className={`text-[11px] ${waitFull ? "text-red-700 font-semibold" : "text-bison-text-muted"}`}>
+          {waitLabel}
+        </div>
+        {seatStatus === "full" && waitFull ? (
+          <div className="text-[11px] text-red-700 font-semibold mt-0.5">Waitlist full</div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
-    <div className="w-40 rounded-md border border-bison-border bg-white p-2 text-left">
-      <div className={`inline-flex text-[11px] font-semibold px-2 py-0.5 rounded border ${statusCls}`}>
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className={`inline-flex text-[11px] font-semibold px-2 py-0.5 rounded border ${statusCls}`}>
         {seatStatus === "full" ? "Class full" : seatStatus === "limited" ? "Limited seats" : "Open"}
-      </div>
-      <div className="mt-1 text-xs font-semibold text-bison-text">{seatLabel}</div>
-      <div className={`text-[11px] ${waitFull ? "text-red-700 font-semibold" : "text-bison-text-muted"}`}>
-        {waitLabel}
-      </div>
-      {seatStatus === "full" && waitFull ? (
-        <div className="text-[11px] text-red-700 font-semibold mt-0.5">Waitlist full</div>
-      ) : null}
+      </span>
+      <span className="text-xs text-bison-text-muted">{seatLabel}</span>
+      <span className={`text-xs ${waitFull ? "text-red-700 font-semibold" : "text-bison-text-muted"}`}>
+        · {waitLabel}
+      </span>
     </div>
   );
 }
