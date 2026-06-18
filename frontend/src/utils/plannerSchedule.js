@@ -163,9 +163,3 @@ export function buildEventTooltip(ev) {
     .filter(Boolean)
     .join(" · ");
 }
-
-export function getEventCardDensity(durationMinutes, heightPct) {
-  if (durationMinutes >= 100 || heightPct >= 13) return "comfortable";
-  if (durationMinutes >= 65 || heightPct >= 8) return "compact";
-  return "tight";
-}

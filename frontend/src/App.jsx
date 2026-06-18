@@ -5,7 +5,6 @@ import CourseSearch from "./pages/CourseSearch.jsx";
 import WeeklyPlanner from "./components/WeeklyPlanner.jsx";
 import PlannerToast from "./components/PlannerToast.jsx";
 import DisclaimerModal from "./components/DisclaimerModal.jsx";
-import SiteFooter from "./components/SiteFooter.jsx";
 import { getCourseDisplayLabel } from "./utils/course.js";
 import {
   findPlannerConflict,
@@ -103,7 +102,7 @@ export default function App() {
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-bison-cream">
       <header className="z-50 shrink-0 border-b border-bison-brown-dark bg-bison-brown shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="font-heading text-3xl text-bison-gold tracking-tight">BISONplan</div>
+          <div className="font-heading text-2xl text-bison-gold tracking-tight">BISONplan</div>
           <nav className="inline-flex rounded-lg border border-white/20 bg-white/5 p-1">
             <button
               type="button"
@@ -133,24 +132,24 @@ export default function App() {
         </div>
       </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto bg-bison-cream">
-        <div hidden={page !== "search"}>
-          <CourseSearch
-            isActive={page === "search"}
-            onAddToPlanner={addCourseToPlanner}
-          />
-        </div>
-        <div hidden={page !== "planner"} className="max-w-6xl mx-auto px-4 py-6">
-          <WeeklyPlanner
-            activePlannerTerm={activePlannerTerm}
-            setActivePlannerTerm={setActivePlannerTerm}
-            plannerByTerm={plannerByTerm}
-            onRemoveCourse={removeCourseFromPlanner}
-          />
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-scroll overscroll-y-contain bg-bison-cream pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="min-h-full flex-1">
+          <div hidden={page !== "search"}>
+            <CourseSearch
+              isActive={page === "search"}
+              onAddToPlanner={addCourseToPlanner}
+            />
+          </div>
+          <div hidden={page !== "planner"} className="max-w-6xl mx-auto px-4 py-6">
+            <WeeklyPlanner
+              activePlannerTerm={activePlannerTerm}
+              setActivePlannerTerm={setActivePlannerTerm}
+              plannerByTerm={plannerByTerm}
+              onRemoveCourse={removeCourseFromPlanner}
+            />
+          </div>
         </div>
       </main>
-
-      <SiteFooter />
       <PlannerToast notice={plannerNotice} onDismiss={dismissPlannerNotice} />
       <Analytics />
       <SpeedInsights />

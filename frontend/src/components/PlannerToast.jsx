@@ -34,7 +34,7 @@ export default function PlannerToast({ notice, onDismiss }) {
 
   return createPortal(
     <div
-      className="fixed bottom-4 left-1/2 z-100 w-[min(92vw,28rem)] -translate-x-1/2 pointer-events-auto"
+      className="fixed bottom-4 left-1/2 z-200 w-[min(92vw,28rem)] -translate-x-1/2 pointer-events-auto pb-[env(safe-area-inset-bottom,0px)]"
       role="status"
       aria-live="polite"
     >
