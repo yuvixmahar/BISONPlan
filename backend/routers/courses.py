@@ -5,7 +5,6 @@ from ..limiter import limiter
 from ..services.aurora import (
     AuroraBudgetBlocked,
     fetch_description,
-    fetch_subjects,
     init_term_session,
     make_client,
 )
@@ -13,9 +12,7 @@ from ..services.cached_aurora import cached_aurora_fetch
 from ..services.description import build_course_detail
 from ..services.scraper import scrape_subject_cached
 from ..utils.api_response import api_response
-from ..utils.aurora_data import normalize_subject_items
 from ..utils.errors import AURORA_ERRORS, aurora_budget_error, aurora_unavailable_error
-from ..utils.pagination import paginated_page
 from ..utils.validation import CRN_PATTERN, SUBJECT_CODE_PATTERN, TERM_CODE_PATTERN
 
 router = APIRouter()

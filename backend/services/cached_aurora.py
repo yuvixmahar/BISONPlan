@@ -2,8 +2,6 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-import httpx
-
 from ..cache import cache
 from ..services.aurora import AuroraBudgetBlocked
 from ..utils.errors import AURORA_ERRORS

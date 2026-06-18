@@ -1,6 +1,5 @@
 import re
 
-
 COURSE_CODE_RE = re.compile(r"\b([A-Z]{2,4})\s*(\d{4})\b")
 
 

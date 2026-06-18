@@ -1,10 +1,13 @@
 import asyncio
-import time
-
-import httpx
 
 from ..cache import cache
-from ..services.aurora import AuroraBudgetBlocked, fetch_courses, fetch_description, init_term_session, make_client
+from ..services.aurora import (
+    AuroraBudgetBlocked,
+    fetch_courses,
+    fetch_description,
+    init_term_session,
+    make_client,
+)
 from ..services.cached_aurora import cached_aurora_fetch
 from ..services.description import empty_course_detail, merge_course_with_description
 from ..utils.errors import AURORA_ERRORS
