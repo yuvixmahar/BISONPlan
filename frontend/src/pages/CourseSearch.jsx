@@ -412,7 +412,7 @@ export default function CourseSearch({
   }
 
   return (
-    <div className="min-h-screen">
+    <div>
       <StaleBanner isStale={isStale} cachedAtMinutesAgo={cachedAtMinutesAgo} />
       <BudgetNoticeBanner
         message={activeBudgetNotice}
