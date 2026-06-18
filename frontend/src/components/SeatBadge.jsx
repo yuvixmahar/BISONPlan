@@ -19,7 +19,7 @@ export default function SeatBadge({
     seatStatus === "open"
       ? "bg-green-100 text-green-900 border-green-200"
       : seatStatus === "limited"
-      ? "bg-yellow-100 text-yellow-900 border-yellow-200"
+      ? "bg-bison-gold/25 text-bison-brown border-bison-gold/50"
       : "bg-red-100 text-red-900 border-red-200";
 
   const seatLabel = seatCap ? `${seats}/${seatCap} seats left` : `${seats} seats left`;
@@ -30,12 +30,12 @@ export default function SeatBadge({
     : "No waitlist";
 
   return (
-    <div className="w-40 rounded-md border border-slate-200 bg-white p-2 text-left">
+    <div className="w-40 rounded-md border border-bison-border bg-white p-2 text-left">
       <div className={`inline-flex text-[11px] font-semibold px-2 py-0.5 rounded border ${statusCls}`}>
         {seatStatus === "full" ? "Class full" : seatStatus === "limited" ? "Limited seats" : "Open"}
       </div>
-      <div className="mt-1 text-xs font-semibold text-slate-800">{seatLabel}</div>
-      <div className={`text-[11px] ${waitFull ? "text-red-700 font-semibold" : "text-slate-600"}`}>
+      <div className="mt-1 text-xs font-semibold text-bison-text">{seatLabel}</div>
+      <div className={`text-[11px] ${waitFull ? "text-red-700 font-semibold" : "text-bison-text-muted"}`}>
         {waitLabel}
       </div>
       {seatStatus === "full" && waitFull ? (

@@ -57,7 +57,7 @@ function CourseChip({ course, termKey, onRemoveCourse }) {
   const dateLabel = start && end ? formatDateRange(start, end) : null;
 
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-700">
+    <span className="inline-flex items-center gap-2 rounded-full border border-bison-border bg-bison-cream px-3 py-1 text-xs text-bison-text">
       <span className="inline-flex flex-col sm:flex-row sm:items-center sm:gap-1">
         <span>
           {code}
@@ -65,12 +65,12 @@ function CourseChip({ course, termKey, onRemoveCourse }) {
           {instructor ? ` · ${instructor}` : ""}
         </span>
         {dateLabel ? (
-          <span className="text-slate-500 sm:before:content-['·'] sm:before:mr-1">{dateLabel}</span>
+          <span className="text-bison-text-muted sm:before:content-['·'] sm:before:mr-1">{dateLabel}</span>
         ) : null}
       </span>
       <button
         type="button"
-        className="text-slate-500 hover:text-slate-800"
+        className="text-bison-text-muted hover:text-bison-text"
         onClick={() => onRemoveCourse(termKey, id)}
         aria-label={`Remove ${code} from planner`}
       >
@@ -94,36 +94,36 @@ function PlannerEventBlock({ ev, density, style, title }) {
 
   return (
     <div
-      className={`absolute rounded-md border border-blue-200 bg-blue-100 text-blue-950 shadow-sm overflow-hidden box-border ${shellClass}`}
+      className={`absolute rounded-md border border-bison-gold/40 bg-bison-gold/25 text-bison-brown shadow-sm overflow-hidden box-border ${shellClass}`}
       style={style}
       title={title}
     >
       {density === "tight" ? (
         <>
           <div className="font-semibold truncate">{codeLine}</div>
-          <div className="truncate text-blue-900/90 text-[9px]">
+          <div className="truncate text-bison-brown/90 text-[9px]">
             {timeLine} · {ev.sectionType}
           </div>
-          <div className="truncate text-blue-900/75 text-[9px]">{locationLine}</div>
+          <div className="truncate text-bison-brown/75 text-[9px]">{locationLine}</div>
         </>
       ) : density === "compact" ? (
         <>
           <div className="font-semibold wrap-break-word leading-tight">{codeLine}</div>
-          <div className="wrap-break-word text-blue-900/90 text-[9px] leading-tight">
+          <div className="wrap-break-word text-bison-brown/90 text-[9px] leading-tight">
             {timeLine} · {ev.sectionType}
           </div>
-          <div className="wrap-break-word text-blue-900/80 text-[9px] leading-tight line-clamp-2">
+          <div className="wrap-break-word text-bison-brown/80 text-[9px] leading-tight line-clamp-2">
             {locationLine}
           </div>
         </>
       ) : (
         <>
           <div className="font-semibold wrap-break-word">{codeLine}</div>
-          <div className="wrap-break-word text-blue-900/90 text-[10px]">{timeLine}</div>
-          <div className="wrap-break-word text-blue-900 font-medium text-[10px] leading-tight">
+          <div className="wrap-break-word text-bison-brown/90 text-[10px]">{timeLine}</div>
+          <div className="wrap-break-word text-bison-brown font-medium text-[10px] leading-tight">
             {ev.sectionType}
           </div>
-          <div className="wrap-break-word text-blue-900/80 text-[10px] leading-tight line-clamp-2">
+          <div className="wrap-break-word text-bison-brown/80 text-[10px] leading-tight line-clamp-2">
             {locationLine}
           </div>
         </>
@@ -137,20 +137,20 @@ function WeekNavigator({ weekLabel, weekNumber, totalWeeks, onPrevious, onNext }
   const atEnd = weekNumber >= totalWeeks;
 
   return (
-    <div className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+    <div className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-bison-border bg-bison-cream px-3 py-2">
       <button
         type="button"
         onClick={onPrevious}
         disabled={atStart}
-        className="px-3 py-1.5 text-sm rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="px-3 py-1.5 text-sm rounded-md border border-bison-border bg-white text-bison-text hover:bg-bison-gold/15 disabled:opacity-40 disabled:cursor-not-allowed"
         aria-label="Previous week"
       >
         ← Previous
       </button>
 
       <div className="text-center min-w-[180px]">
-        <div className="text-sm font-semibold text-slate-900">{weekLabel}</div>
-        <div className="text-xs text-slate-600 mt-0.5">
+        <div className="text-sm font-semibold text-bison-text">{weekLabel}</div>
+        <div className="text-xs text-bison-text-muted mt-0.5">
           Week {weekNumber} of {totalWeeks}
         </div>
       </div>
@@ -159,7 +159,7 @@ function WeekNavigator({ weekLabel, weekNumber, totalWeeks, onPrevious, onNext }
         type="button"
         onClick={onNext}
         disabled={atEnd}
-        className="px-3 py-1.5 text-sm rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="px-3 py-1.5 text-sm rounded-md border border-bison-border bg-white text-bison-text hover:bg-bison-gold/15 disabled:opacity-40 disabled:cursor-not-allowed"
         aria-label="Next week"
       >
         Next →
@@ -241,7 +241,7 @@ function WeeklyScheduleGrid({ weekStart, events }) {
   return (
     <div className="space-y-3">
       {!hasAnyEvents ? (
-        <div className="text-sm text-slate-600 rounded-lg border border-dashed border-slate-200 px-4 py-3 text-center">
+        <div className="text-sm text-bison-text-muted rounded-lg border border-dashed border-bison-border px-4 py-3 text-center">
           No classes scheduled this week.
         </div>
       ) : null}
@@ -262,7 +262,7 @@ function WeeklyScheduleGrid({ weekStart, events }) {
               <div
                 key={dateKey}
                 className={`px-2 py-1 rounded-md ${
-                  hasPossibleClass ? "bg-white" : "bg-slate-50 text-slate-400"
+                  hasPossibleClass ? "bg-white" : "bg-bison-cream text-bison-text-muted/80"
                 }`}
               >
                 <div className="text-xs font-semibold">{dayLabel}</div>
@@ -275,7 +275,7 @@ function WeeklyScheduleGrid({ weekStart, events }) {
             {hours.map((minute) => (
               <div
                 key={minute}
-                className="absolute text-[10px] text-slate-500 -translate-y-1/2"
+                className="absolute text-[10px] text-bison-text-muted -translate-y-1/2"
                 style={{
                   top: `${((minute - timeRange.startMinutes) / timeRange.totalMinutes) * 100}%`,
                 }}
@@ -299,14 +299,14 @@ function WeeklyScheduleGrid({ weekStart, events }) {
                 key={`grid-${dateKey}`}
                 className={`relative rounded-lg border ${gridHeightClass} ${
                   hasPossibleClass
-                    ? "border-slate-200 bg-slate-50/40"
-                    : "border-slate-100 bg-slate-50/20"
+                    ? "border-bison-border bg-bison-cream/40"
+                    : "border-bison-border/70 bg-bison-cream/20"
                 }`}
               >
                 {hours.map((minute) => (
                   <div
                     key={`${dateKey}-${minute}`}
-                    className="absolute left-0 right-0 border-t border-slate-200/80"
+                    className="absolute left-0 right-0 border-t border-bison-border/80"
                     style={{
                       top: `${((minute - timeRange.startMinutes) / timeRange.totalMinutes) * 100}%`,
                     }}
@@ -382,14 +382,14 @@ export default function WeeklyPlanner({
     <section className="mt-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="font-heading text-2xl text-slate-900">Week at a Glance</h2>
-          <p className="text-sm text-slate-600 mt-1">
+          <h2 className="font-heading text-2xl text-bison-text">Week at a Glance</h2>
+          <p className="text-sm text-bison-text-muted mt-1">
             Browse week by week from the first to last class date. Summer, fall, and winter all
             use the same calendar view.
           </p>
         </div>
         <div
-          className="inline-flex rounded-lg border border-slate-200 bg-white p-1"
+          className="inline-flex rounded-lg border border-bison-border bg-white p-1"
           role="tablist"
           aria-label="Planner term"
         >
@@ -400,10 +400,10 @@ export default function WeeklyPlanner({
               role="tab"
               aria-selected={activePlannerTerm === key}
               onClick={() => setActivePlannerTerm(key)}
-              className={`px-3 py-1.5 text-sm rounded-md ${
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                 activePlannerTerm === key
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
+                  ? "bg-bison-gold text-bison-brown font-semibold"
+                  : "text-bison-text hover:bg-bison-gold/15"
               }`}
             >
               {label}
@@ -412,9 +412,9 @@ export default function WeeklyPlanner({
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 md:p-4">
+      <div className="mt-4 rounded-xl border border-bison-border bg-white p-3 md:p-4">
         {plannedCourses.length === 0 ? (
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-bison-text-muted">
             No courses added yet for {activeTermLabel.toLowerCase()}. Use “Add to Planner” from
             search results.
           </div>

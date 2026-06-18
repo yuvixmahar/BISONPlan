@@ -35,31 +35,31 @@ export default function CourseCard({ course, onQuickView, onAddToPlanner }) {
     : "View course details";
 
   return (
-    <div className="group border border-slate-200 rounded-lg bg-white shadow-sm transition-all duration-150 hover:border-slate-300 hover:bg-slate-50/60 hover:shadow-md">
+    <div className="group border border-bison-border rounded-lg bg-white shadow-sm transition-all duration-150 hover:border-bison-gold/50 hover:bg-bison-gold/10 hover:shadow-md">
       <div className="flex gap-3 items-start px-4 py-3">
         <button
           type="button"
           onClick={() => onQuickView?.(course)}
           aria-label={detailLabel}
-          className="flex-1 min-w-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 rounded-md"
+          className="flex-1 min-w-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bison-gold focus-visible:ring-offset-2 rounded-md"
         >
-          <div className="font-heading font-semibold text-slate-900 leading-tight">
+          <div className="font-heading font-semibold text-bison-text leading-tight">
             {code || "Course"}
           </div>
-          <div className="text-sm text-slate-600 mt-0.5 truncate">{title}</div>
-          <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-1.5">
+          <div className="text-sm text-bison-text-muted mt-0.5 truncate">{title}</div>
+          <div className="text-xs text-bison-text-muted mt-1 flex flex-wrap items-center gap-x-1.5">
             <span>{section ? `Section ${section}` : "Section —"}</span>
-            <span aria-hidden="true" className="text-slate-300">
+            <span aria-hidden="true" className="text-bison-border">
               ·
             </span>
             <span>{instructor || "Instructor TBA"}</span>
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">
+          <div className="text-xs text-bison-text-muted mt-0.5">
             {credits ? `${credits} credits` : ""}
             {credits && meeting ? " · " : ""}
             {meeting ? meeting : ""}
           </div>
-          <div className="mt-2 text-[11px] text-slate-400 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+          <div className="mt-2 text-[11px] text-bison-text-muted/80 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
             Click for course details
           </div>
           {meetings.length > 0 ? (
@@ -74,7 +74,7 @@ export default function CourseCard({ course, onQuickView, onAddToPlanner }) {
                 return (
                   <span
                     key={`${idx}-${mt.beginTime}-${mt.endTime}`}
-                    className="text-[11px] px-2 py-1 rounded border border-slate-200 bg-slate-50 text-slate-700"
+                    className="text-[11px] px-2 py-1 rounded border border-bison-border bg-bison-cream text-bison-text"
                   >
                     {days ? `${days} ` : ""}
                     {time} • {loc}
@@ -95,7 +95,7 @@ export default function CourseCard({ course, onQuickView, onAddToPlanner }) {
           <button
             type="button"
             onClick={() => onAddToPlanner?.(course)}
-            className="mt-2 w-full text-[11px] px-2 py-1 rounded border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800"
+            className="mt-2 w-full cursor-pointer text-[11px] px-2 py-1 rounded border border-bison-gold/60 bg-bison-gold/15 hover:bg-bison-gold/30 text-bison-brown transition-colors"
           >
             Add to Planner
           </button>

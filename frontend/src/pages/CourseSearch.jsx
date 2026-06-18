@@ -6,7 +6,9 @@ import useCourses from "../hooks/useCourses.js";
 import FilterPanel from "../components/FilterPanel.jsx";
 import SearchBar from "../components/SearchBar.jsx";
 import CourseList from "../components/CourseList.jsx";
+import SeatRefreshCounter from "../components/SeatRefreshCounter.jsx";
 import StaleBanner from "../components/StaleBanner.jsx";
+import BudgetNoticeBanner from "../components/BudgetNoticeBanner.jsx";
 import LoadErrorBanner from "../components/LoadErrorBanner.jsx";
 import QuickViewDrawer from "../components/QuickViewDrawer.jsx";
 import { plannerTermFromTermDescription } from "../utils/planner.js";
@@ -57,6 +59,8 @@ export default function CourseSearch({
   const [timeFilter, setTimeFilter] = useState("any");
   const [instructorFilter, setInstructorFilter] = useState("");
   const [quickViewCourse, setQuickViewCourse] = useState(null);
+  const [budgetNotice, setBudgetNotice] = useState("");
+  const [budgetDismissed, setBudgetDismissed] = useState(false);
 
   useEffect(() => {
     if (isActive) return;
@@ -74,6 +78,10 @@ export default function CourseSearch({
       setTerms(pageItems);
       setTermsHasMore(Boolean(json?.data?.has_more));
       setTermsOffset(json?.data?.next_offset || 2);
+      if (json?.budget_message) {
+        setBudgetNotice(json.budget_message);
+        setBudgetDismissed(false);
+      }
     } catch (error) {
       setTerms([]);
       setTermsHasMore(false);
@@ -100,6 +108,10 @@ export default function CourseSearch({
       setSubjectOffset(json?.data?.next_offset || 2);
       setSubject("");
       setSubjectInput("");
+      if (json?.budget_message) {
+        setBudgetNotice(json.budget_message);
+        setBudgetDismissed(false);
+      }
     } catch (error) {
       setSubjects([]);
       setSubjectHasMore(false);
@@ -125,7 +137,8 @@ export default function CourseSearch({
     loadInitialSubjects(termCode);
   }, [termCode, loadInitialSubjects]);
 
-  const { data: courses, loading, error, isStale, cachedAt } = useCourses(subject, termCode);
+  const { data: courses, loading, error, isStale, cachedAt, cacheTtlSeconds, budgetMessage } =
+    useCourses(subject, termCode);
 
   async function loadMoreTerms() {
     if (termsLoading || !termsHasMore || termsError) return;
@@ -284,6 +297,10 @@ export default function CourseSearch({
   }, [subjectActiveIndex, subjectMenuOpen]);
 
   const cachedAtMinutesAgo = useMemo(() => toMinutesAgo(cachedAt), [cachedAt]);
+  const activeBudgetNotice = useMemo(() => {
+    if (budgetDismissed) return "";
+    return budgetNotice || budgetMessage || "";
+  }, [budgetDismissed, budgetNotice, budgetMessage]);
   const selectedTermLabel = useMemo(() => {
     return terms.find((t) => t.code === termCode)?.description || "Select a term";
   }, [terms, termCode]);
@@ -397,6 +414,10 @@ export default function CourseSearch({
   return (
     <div className="min-h-screen">
       <StaleBanner isStale={isStale} cachedAtMinutesAgo={cachedAtMinutesAgo} />
+      <BudgetNoticeBanner
+        message={activeBudgetNotice}
+        onDismiss={() => setBudgetDismissed(true)}
+      />
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {termsError ? (
@@ -411,27 +432,30 @@ export default function CourseSearch({
 
         <div>
           <div>
-            <div className="font-heading text-3xl">Course Search</div>
-            <div className="text-sm text-slate-600 mt-1">
+            <div className="font-heading text-3xl text-bison-brown">Course Search</div>
+            <div className="text-sm text-bison-text-muted mt-1">
               Live seats from Aurora, with fallback when Aurora is down.
             </div>
+            {hasCourseSelection && cachedAt && !loading ? (
+              <SeatRefreshCounter cachedAt={cachedAt} cacheTtlSeconds={cacheTtlSeconds} />
+            ) : null}
           </div>
         </div>
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="relative" ref={termMenuRef}>
-            <label className="text-xs text-slate-600">Term</label>
+            <label className="text-xs text-bison-text-muted">Term</label>
             <button
               type="button"
               onClick={() => setTermMenuOpen((v) => !v)}
-              className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300 text-left flex items-center justify-between gap-2"
+              className="w-full mt-1 border border-bison-border rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-bison-gold text-left flex items-center justify-between gap-2"
             >
               <span className="truncate">{selectedTermLabel}</span>
               <svg
                 aria-hidden="true"
                 viewBox="0 0 20 20"
                 fill="none"
-                className={`h-4 w-4 text-slate-400 transition-transform ${
+                className={`h-4 w-4 text-bison-text-muted/80 transition-transform ${
                   termMenuOpen ? "rotate-180" : ""
                 }`}
               >
@@ -446,7 +470,7 @@ export default function CourseSearch({
             </button>
 
             {termMenuOpen ? (
-              <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg">
+              <div className="absolute z-20 mt-1 w-full bg-white border border-bison-border rounded-lg shadow-lg">
                 <div
                   className="max-h-64 overflow-y-auto py-1"
                   onScroll={onTermListScroll}
@@ -459,18 +483,18 @@ export default function CourseSearch({
                         setTermCode(t.code);
                         setTermMenuOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 ${
-                        t.code === termCode ? "bg-slate-100" : ""
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-bison-gold/10 ${
+                        t.code === termCode ? "bg-bison-gold/20 text-bison-brown font-medium" : ""
                       }`}
                     >
                       {t.description}
                     </button>
                   ))}
                   {termsLoading ? (
-                    <div className="px-3 py-2 text-xs text-slate-500">Loading more terms...</div>
+                    <div className="px-3 py-2 text-xs text-bison-text-muted">Loading more terms...</div>
                   ) : null}
                   {!termsHasMore ? (
-                    <div className="px-3 py-2 text-xs text-slate-400">No more terms</div>
+                    <div className="px-3 py-2 text-xs text-bison-text-muted/80">No more terms</div>
                   ) : null}
                 </div>
               </div>
@@ -478,7 +502,7 @@ export default function CourseSearch({
           </div>
 
           <div className="md:col-span-2">
-            <label className="text-xs text-slate-600">Subject</label>
+            <label className="text-xs text-bison-text-muted">Subject</label>
             {subjectsError ? (
               <div className="mt-1 mb-2">
                 <LoadErrorBanner
@@ -495,10 +519,10 @@ export default function CourseSearch({
                 onFocus={() => setSubjectMenuOpen(true)}
                 onKeyDown={onSubjectInputKeyDown}
                 placeholder="Type subject code or name..."
-                className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                className="w-full mt-1 border border-bison-border rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-bison-gold"
               />
               {subjectMenuOpen ? (
-                <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg">
+                <div className="absolute z-20 mt-1 w-full bg-white border border-bison-border rounded-lg shadow-lg">
                   <div
                     ref={subjectListRef}
                     className="max-h-64 overflow-y-auto py-1"
@@ -511,9 +535,9 @@ export default function CourseSearch({
                         type="button"
                         onMouseEnter={() => setSubjectActiveIndex(idx)}
                         onClick={() => selectSubjectOption(s)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 ${
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-bison-gold/10 ${
                           idx === subjectActiveIndex || s.code === subject
-                            ? "bg-slate-100"
+                            ? "bg-bison-gold/20 text-bison-brown font-medium"
                             : ""
                         }`}
                       >
@@ -521,10 +545,10 @@ export default function CourseSearch({
                       </button>
                     ))}
                     {subjectLoading ? (
-                      <div className="px-3 py-2 text-xs text-slate-500">Loading subjects...</div>
+                      <div className="px-3 py-2 text-xs text-bison-text-muted">Loading subjects...</div>
                     ) : null}
                     {!subjectLoading && subjects.length === 0 ? (
-                      <div className="px-3 py-2 text-xs text-slate-400">No matches</div>
+                      <div className="px-3 py-2 text-xs text-bison-text-muted/80">No matches</div>
                     ) : null}
                   </div>
                 </div>
@@ -562,15 +586,15 @@ export default function CourseSearch({
               
         <div className="mt-6">
           {!termCode ? (
-            <div className="text-slate-600 bg-white border border-slate-200 rounded-lg p-4">
+            <div className="text-bison-text-muted bg-white border border-bison-border rounded-lg p-4">
               Select a term to begin.
             </div>
           ) : !subject ? (
-            <div className="text-slate-600 bg-white border border-slate-200 rounded-lg p-4">
+            <div className="text-bison-text-muted bg-white border border-bison-border rounded-lg p-4">
               Select a department to load courses.
             </div>
           ) : loading ? (
-            <div className="text-slate-600">Loading courses...</div>
+            <div className="text-bison-text-muted">Loading courses...</div>
           ) : error ? (
             <div className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
               {error}
@@ -584,7 +608,7 @@ export default function CourseSearch({
             />
           )}
           {hasCourseSelection && !loading && !error && filteredCourses.length === 0 ? (
-            <div className="text-slate-600 mt-4">Try adjusting your filters.</div>
+            <div className="text-bison-text-muted mt-4">Try adjusting your filters.</div>
           ) : null}
         </div>
       </div>
