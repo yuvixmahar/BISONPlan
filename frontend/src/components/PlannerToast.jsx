@@ -5,11 +5,11 @@ export const TOAST_DURATION_MS = 2500;
 
 const TONE_STYLES = {
   success: {
-    panel: "bg-bison-gold/15 border-bison-gold/50 text-bison-brown",
+    panel: "bg-bison-cream border-bison-gold text-bison-brown",
     bar: "bg-bison-gold",
   },
   warning: {
-    panel: "bg-bison-gold/10 border-bison-gold/40 text-bison-brown",
+    panel: "bg-bison-cream border-bison-gold-dark text-bison-brown",
     bar: "bg-bison-gold-dark",
   },
   error: {
@@ -44,7 +44,7 @@ export default function PlannerToast({ notice, onDismiss }) {
           <button
             type="button"
             onClick={onDismiss}
-            className="text-xs px-2 py-1 rounded border border-current/20 hover:bg-white/40 shrink-0"
+            className="text-xs px-2 py-1 rounded border border-current/20 hover:bg-bison-border shrink-0"
           >
             Dismiss
           </button>

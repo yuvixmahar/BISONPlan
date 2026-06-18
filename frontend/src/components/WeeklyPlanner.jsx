@@ -79,20 +79,30 @@ function CourseChip({ course, termKey, onRemoveCourse }) {
   );
 }
 
-function PlannerEventBlock({ ev, style, title }) {
+function PlannerEventBlock({ ev, variant, style, title }) {
   const codeLine = `${ev.code}${ev.section ? ` ${ev.section}` : ""}`;
   const timeLine = formatTimeRangeCompact(ev.start, ev.end);
   const locationLine = ev.location || "Location TBA";
 
+  const shellClass =
+    variant === "comfortable"
+      ? "px-2 py-1.5 text-[10px] leading-[1.2]"
+      : variant === "normal"
+        ? "px-1.5 py-1 text-[9.5px] leading-[1.2]"
+        : "px-1 py-px text-[9px] leading-[1.15]";
+
   return (
     <div
-      className="absolute box-border flex h-full min-h-0 flex-col overflow-hidden rounded border border-bison-gold/40 bg-bison-gold/25 px-1 py-px text-[9px] leading-[1.15] text-bison-brown shadow-sm"
+      className={`absolute box-border flex h-full min-h-0 flex-col overflow-hidden rounded border border-bison-gold bg-[#f7e6bb] text-bison-brown shadow-sm ${shellClass}`}
       style={style}
       title={title}
     >
       <div className="shrink-0 font-semibold whitespace-nowrap">{codeLine}</div>
       <div className="shrink-0 whitespace-nowrap">{ev.sectionType}</div>
       <div className="shrink-0 whitespace-nowrap text-bison-brown/90">{timeLine}</div>
+      {variant === "comfortable" ? (
+        <div className="shrink-0 whitespace-nowrap text-bison-brown/80">{ev.instructor || ""}</div>
+      ) : null}
       <div className="min-h-0 text-bison-brown/80 leading-[1.1]">{locationLine}</div>
     </div>
   );
@@ -195,7 +205,8 @@ function WeeklyScheduleGrid({ weekStart, events }) {
     const { startMinutes, totalMinutes } = timeRange;
     const topPct = ((ev.start - startMinutes) / totalMinutes) * 100;
     const heightPct = ((ev.end - ev.start) / totalMinutes) * 100;
-    return { topPct, heightPct };
+    const durationMinutes = ev.end - ev.start;
+    return { topPct, heightPct, durationMinutes };
   };
 
   return (
@@ -273,14 +284,21 @@ function WeeklyScheduleGrid({ weekStart, events }) {
                   />
                 ))}
                 {layout.map(({ ev, column, totalColumns }) => {
-                  const { topPct, heightPct } = eventPosition(ev);
+                  const { topPct, heightPct, durationMinutes } = eventPosition(ev);
                   const widthPct = 100 / totalColumns;
                   const leftPct = column * widthPct;
+                  const variant =
+                    durationMinutes >= 120
+                      ? "comfortable"
+                      : durationMinutes >= 90
+                        ? "normal"
+                        : "tight";
 
                   return (
                     <PlannerEventBlock
                       key={ev.id}
                       ev={ev}
+                      variant={variant}
                       title={buildEventTooltip(ev)}
                       style={{
                         top: `calc(${topPct}% + ${EVENT_GAP_PX / 2}px)`,
