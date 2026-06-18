@@ -100,8 +100,8 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-dvh w-full flex-col bg-bison-cream">
-      <header className="sticky top-0 z-50 shrink-0 border-b border-bison-brown-dark bg-bison-brown shadow-md">
+    <div className="min-h-dvh w-full bg-bison-cream">
+      <header className="sticky top-0 z-50 border-b border-bison-brown-dark bg-bison-brown shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="font-heading text-3xl text-bison-gold tracking-tight">BISONplan</div>
           <nav className="inline-flex rounded-lg border border-white/20 bg-white/5 p-1">
@@ -133,7 +133,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0">
+      <main>
         <div hidden={page !== "search"}>
           <CourseSearch
             isActive={page === "search"}

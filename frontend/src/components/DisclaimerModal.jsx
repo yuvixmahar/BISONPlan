@@ -2,7 +2,7 @@ import { DISCLAIMER_SECTIONS } from "../utils/disclaimer.js";
 
 export default function DisclaimerModal({ onAccept }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-bison-cream">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-bison-cream">
       <div
         role="dialog"
         aria-modal="true"

@@ -27,7 +27,7 @@ export const DISCLAIMER_SECTIONS = [
   {
     title: "Data may be delayed",
     body:
-      "Course information is fetched from Aurora and cached for up to 10 minutes. During high traffic or overnight hours, what you see may not reflect the latest availability.",
+      "Course information is fetched from Aurora and cached (about 10 minutes during the day, up to 30 minutes between midnight and 6 AM CST). Data may not always reflect the latest availability.",
   },
   {
     title: "No guarantees",
