@@ -19,7 +19,8 @@
 }
 
 html {
-  background-color: var(--color-bison-brown);
+  background-color: var(--color-bison-cream);
+  overscroll-behavior: none;
 }
 
 body {
@@ -28,6 +29,7 @@ body {
   color: var(--color-bison-text);
   height: 100dvh;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 #root {

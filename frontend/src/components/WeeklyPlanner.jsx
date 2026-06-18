@@ -22,12 +22,11 @@ import {
 import {
   buildEventTooltip,
   EVENT_GAP_PX,
-  getEventCardDensity,
   getTimeRangeForEvents,
   layoutDayEvents,
   normalizePlannerEvents,
 } from "../utils/plannerSchedule.js";
-import { formatMinutesAmPm, formatTimeRangeFromMinutes } from "../utils/time.js";
+import { formatMinutesAmPm, formatTimeRangeCompact } from "../utils/time.js";
 
 const GRID_HEIGHT_DEFAULT = "h-[min(calc(100vh-13rem),40rem)] min-h-72";
 const GRID_LAYOUT_CLASS =
@@ -70,7 +69,7 @@ function CourseChip({ course, termKey, onRemoveCourse }) {
       </span>
       <button
         type="button"
-        className="text-bison-text-muted hover:text-bison-text"
+        className="cursor-pointer text-base leading-none text-bison-text-muted hover:text-bison-text"
         onClick={() => onRemoveCourse(termKey, id)}
         aria-label={`Remove ${code} from planner`}
       >
@@ -80,54 +79,21 @@ function CourseChip({ course, termKey, onRemoveCourse }) {
   );
 }
 
-function PlannerEventBlock({ ev, density, style, title }) {
+function PlannerEventBlock({ ev, style, title }) {
   const codeLine = `${ev.code}${ev.section ? ` ${ev.section}` : ""}`;
-  const timeLine = formatTimeRangeFromMinutes(ev.start, ev.end);
+  const timeLine = formatTimeRangeCompact(ev.start, ev.end);
   const locationLine = ev.location || "Location TBA";
-
-  const shellClass =
-    density === "tight"
-      ? "px-1 py-0.5 text-[10px] leading-[1.2]"
-      : density === "compact"
-        ? "px-1.5 py-1 text-[10px] leading-[1.25]"
-        : "px-2 py-1.5 text-[11px] leading-snug";
 
   return (
     <div
-      className={`absolute rounded-md border border-bison-gold/40 bg-bison-gold/25 text-bison-brown shadow-sm overflow-hidden box-border ${shellClass}`}
+      className="absolute box-border flex h-full min-h-0 flex-col overflow-hidden rounded border border-bison-gold/40 bg-bison-gold/25 px-1 py-px text-[9px] leading-[1.15] text-bison-brown shadow-sm"
       style={style}
       title={title}
     >
-      {density === "tight" ? (
-        <>
-          <div className="font-semibold truncate">{codeLine}</div>
-          <div className="truncate text-bison-brown/90 text-[9px]">
-            {timeLine} · {ev.sectionType}
-          </div>
-          <div className="truncate text-bison-brown/75 text-[9px]">{locationLine}</div>
-        </>
-      ) : density === "compact" ? (
-        <>
-          <div className="font-semibold wrap-break-word leading-tight">{codeLine}</div>
-          <div className="wrap-break-word text-bison-brown/90 text-[9px] leading-tight">
-            {timeLine} · {ev.sectionType}
-          </div>
-          <div className="wrap-break-word text-bison-brown/80 text-[9px] leading-tight line-clamp-2">
-            {locationLine}
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="font-semibold wrap-break-word">{codeLine}</div>
-          <div className="wrap-break-word text-bison-brown/90 text-[10px]">{timeLine}</div>
-          <div className="wrap-break-word text-bison-brown font-medium text-[10px] leading-tight">
-            {ev.sectionType}
-          </div>
-          <div className="wrap-break-word text-bison-brown/80 text-[10px] leading-tight line-clamp-2">
-            {locationLine}
-          </div>
-        </>
-      )}
+      <div className="shrink-0 font-semibold whitespace-nowrap">{codeLine}</div>
+      <div className="shrink-0 whitespace-nowrap">{ev.sectionType}</div>
+      <div className="shrink-0 whitespace-nowrap text-bison-brown/90">{timeLine}</div>
+      <div className="min-h-0 text-bison-brown/80 leading-[1.1]">{locationLine}</div>
     </div>
   );
 }
@@ -229,13 +195,7 @@ function WeeklyScheduleGrid({ weekStart, events }) {
     const { startMinutes, totalMinutes } = timeRange;
     const topPct = ((ev.start - startMinutes) / totalMinutes) * 100;
     const heightPct = ((ev.end - ev.start) / totalMinutes) * 100;
-    const durationMinutes = ev.end - ev.start;
-    return {
-      topPct,
-      heightPct,
-      durationMinutes,
-      density: getEventCardDensity(durationMinutes, heightPct),
-    };
+    return { topPct, heightPct };
   };
 
   return (
@@ -313,7 +273,7 @@ function WeeklyScheduleGrid({ weekStart, events }) {
                   />
                 ))}
                 {layout.map(({ ev, column, totalColumns }) => {
-                  const { topPct, heightPct, density } = eventPosition(ev);
+                  const { topPct, heightPct } = eventPosition(ev);
                   const widthPct = 100 / totalColumns;
                   const leftPct = column * widthPct;
 
@@ -321,7 +281,6 @@ function WeeklyScheduleGrid({ weekStart, events }) {
                     <PlannerEventBlock
                       key={ev.id}
                       ev={ev}
-                      density={density}
                       title={buildEventTooltip(ev)}
                       style={{
                         top: `calc(${topPct}% + ${EVENT_GAP_PX / 2}px)`,

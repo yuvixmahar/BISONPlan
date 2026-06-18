@@ -25,8 +25,21 @@ export function formatMinutesAmPm(totalMinutes) {
   return `${normalized}:${String(mm).padStart(2, "0")} ${suffix}`;
 }
 
+/** Compact range like Aurora week-at-a-glance: "9:30 am–10:20 am". */
+export function formatMinutesAmPmCompact(totalMinutes) {
+  const hh = Math.floor(totalMinutes / 60);
+  const mm = totalMinutes % 60;
+  const suffix = hh >= 12 ? "pm" : "am";
+  const normalized = hh % 12 === 0 ? 12 : hh % 12;
+  return `${normalized}:${String(mm).padStart(2, "0")} ${suffix}`;
+}
+
 export function formatTimeRangeFromMinutes(start, end) {
   return `${formatMinutesAmPm(start)}–${formatMinutesAmPm(end)}`;
+}
+
+export function formatTimeRangeCompact(start, end) {
+  return `${formatMinutesAmPmCompact(start)}–${formatMinutesAmPmCompact(end)}`;
 }
 
 export function formatTimeRangeFromHhmm(start, end) {
