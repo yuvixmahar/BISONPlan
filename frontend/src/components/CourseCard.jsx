@@ -41,6 +41,7 @@ export default function CourseCard({ course, onQuickView, onAddToPlanner }) {
           type="button"
           onClick={() => onQuickView?.(course)}
           aria-label={detailLabel}
+          aria-haspopup="dialog"
           className="flex-1 min-w-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bison-gold focus-visible:ring-offset-2 rounded-md"
         >
           <div className="font-heading font-semibold text-bison-text leading-tight">
