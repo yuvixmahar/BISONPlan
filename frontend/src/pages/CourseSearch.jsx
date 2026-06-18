@@ -8,7 +8,6 @@ import SearchBar from "../components/SearchBar.jsx";
 import CourseList from "../components/CourseList.jsx";
 import SeatRefreshCounter from "../components/SeatRefreshCounter.jsx";
 import StaleBanner from "../components/StaleBanner.jsx";
-import BudgetNoticeBanner from "../components/BudgetNoticeBanner.jsx";
 import LoadErrorBanner from "../components/LoadErrorBanner.jsx";
 import QuickViewDrawer from "../components/QuickViewDrawer.jsx";
 import { plannerTermFromTermDescription } from "../utils/planner.js";
@@ -59,8 +58,6 @@ export default function CourseSearch({
   const [timeFilter, setTimeFilter] = useState("any");
   const [instructorFilter, setInstructorFilter] = useState("");
   const [quickViewCourse, setQuickViewCourse] = useState(null);
-  const [budgetNotice, setBudgetNotice] = useState("");
-  const [budgetDismissed, setBudgetDismissed] = useState(false);
 
   useEffect(() => {
     if (isActive) return;
@@ -78,10 +75,6 @@ export default function CourseSearch({
       setTerms(pageItems);
       setTermsHasMore(Boolean(json?.data?.has_more));
       setTermsOffset(json?.data?.next_offset || 2);
-      if (json?.budget_message) {
-        setBudgetNotice(json.budget_message);
-        setBudgetDismissed(false);
-      }
     } catch (error) {
       setTerms([]);
       setTermsHasMore(false);
@@ -108,10 +101,6 @@ export default function CourseSearch({
       setSubjectOffset(json?.data?.next_offset || 2);
       setSubject("");
       setSubjectInput("");
-      if (json?.budget_message) {
-        setBudgetNotice(json.budget_message);
-        setBudgetDismissed(false);
-      }
     } catch (error) {
       setSubjects([]);
       setSubjectHasMore(false);
@@ -137,8 +126,9 @@ export default function CourseSearch({
     loadInitialSubjects(termCode);
   }, [termCode, loadInitialSubjects]);
 
-  const { data: courses, loading, error, isStale, cachedAt, cacheTtlSeconds, budgetMessage } =
-    useCourses(subject, termCode);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const { data: courses, loading, refreshing, error, isStale, cachedAt, cacheTtlSeconds } =
+    useCourses(subject, termCode, refreshTick);
 
   async function loadMoreTerms() {
     if (termsLoading || !termsHasMore || termsError) return;
@@ -297,10 +287,6 @@ export default function CourseSearch({
   }, [subjectActiveIndex, subjectMenuOpen]);
 
   const cachedAtMinutesAgo = useMemo(() => toMinutesAgo(cachedAt), [cachedAt]);
-  const activeBudgetNotice = useMemo(() => {
-    if (budgetDismissed) return "";
-    return budgetNotice || budgetMessage || "";
-  }, [budgetDismissed, budgetNotice, budgetMessage]);
   const selectedTermLabel = useMemo(() => {
     return terms.find((t) => t.code === termCode)?.description || "Select a term";
   }, [terms, termCode]);
@@ -414,10 +400,6 @@ export default function CourseSearch({
   return (
     <div>
       <StaleBanner isStale={isStale} cachedAtMinutesAgo={cachedAtMinutesAgo} />
-      <BudgetNoticeBanner
-        message={activeBudgetNotice}
-        onDismiss={() => setBudgetDismissed(true)}
-      />
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {termsError ? (
@@ -437,7 +419,12 @@ export default function CourseSearch({
               Live seats from Aurora, with fallback when Aurora is down.
             </div>
             {hasCourseSelection && cachedAt && !loading ? (
-              <SeatRefreshCounter cachedAt={cachedAt} cacheTtlSeconds={cacheTtlSeconds} />
+              <SeatRefreshCounter
+                cachedAt={cachedAt}
+                cacheTtlSeconds={cacheTtlSeconds}
+                refreshing={refreshing}
+                onRefresh={() => setRefreshTick((t) => t + 1)}
+              />
             ) : null}
           </div>
         </div>

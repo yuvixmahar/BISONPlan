@@ -1,36 +1,44 @@
 import { useEffect, useMemo, useState } from "react";
 import { getCourses } from "../api/client.js";
 import { DEFAULT_SEAT_CACHE_TTL_SECONDS } from "../utils/seatRefresh.js";
-export default function useCourses(subject, term) {
+export default function useCourses(subject, term, refreshTick = 0) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [isStale, setIsStale] = useState(false);
   const [cachedAt, setCachedAt] = useState(null);
   const [cacheTtlSeconds, setCacheTtlSeconds] = useState(null);
-  const [budgetMessage, setBudgetMessage] = useState(null);
 
   const enabled = useMemo(() => {
     return Boolean(subject && subject.trim() && term && term.trim());
   }, [subject, term]);
 
+  // Track whether this is a background refresh (data already loaded) vs initial load
+  const hasData = data.length > 0;
+
   useEffect(() => {
     if (!enabled) {
       setData([]);
       setLoading(false);
+      setRefreshing(false);
       setError(null);
-      setBudgetMessage(null);
       setCacheTtlSeconds(null);
       return;
     }
 
     let cancelled = false;
+    const isRefresh = hasData && refreshTick > 0;
+
     async function run() {
-      setLoading(true);
-      setError(null);
-      setBudgetMessage(null);
-      setCachedAt(null);
-      setCacheTtlSeconds(null);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+        setError(null);
+        setCachedAt(null);
+        setCacheTtlSeconds(null);
+      }
       try {
         const res = await getCourses(subject, term, false);
         if (cancelled) return;
@@ -38,15 +46,17 @@ export default function useCourses(subject, term) {
         setIsStale(res.source === "stale" || res.source === "cached_only");
         setCachedAt(res.cached_at ?? null);
         setCacheTtlSeconds(res.cache_ttl_seconds ?? DEFAULT_SEAT_CACHE_TTL_SECONDS);
-        setBudgetMessage(res.budget_message || null);
+        if (isRefresh) setError(null);
       } catch (e) {
         if (cancelled) return;
         setError(e?.message || "Failed to load courses");
-        setData([]);
-        setBudgetMessage(null);
-        setCacheTtlSeconds(null);
+        if (!isRefresh) setData([]);
+        if (!isRefresh) setCacheTtlSeconds(null);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     }
 
@@ -54,8 +64,8 @@ export default function useCourses(subject, term) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, subject, term]);
+  }, [enabled, subject, term, refreshTick]);
 
-  return { data, loading, error, isStale, cachedAt, cacheTtlSeconds, budgetMessage };
+  return { data, loading, refreshing, error, isStale, cachedAt, cacheTtlSeconds };
 }
 
