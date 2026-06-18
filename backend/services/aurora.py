@@ -1,16 +1,24 @@
 import httpx
 
-from ..config import BASE_URL, HEADERS, aurora_cookies
+from ..config import BASE_URL, aurora_cookies, aurora_headers
 from ..utils.aurora_data import json_list
 from ..utils.html_parser import parse_description_html
+from .aurora_budget import AuroraBudgetBlocked, aurora_budget
 
 
 def make_client(timeout: float = 30) -> httpx.AsyncClient:
     return httpx.AsyncClient(
         cookies=aurora_cookies(),
-        headers=HEADERS,
+        headers=aurora_headers(),
         timeout=timeout,
     )
+
+
+async def _request(client: httpx.AsyncClient, method: str, url: str, **kwargs):
+    aurora_budget.assert_can_request()
+    aurora_budget.record_request()
+    request_fn = client.get if method == "GET" else client.post
+    return await request_fn(url, **kwargs)
 
 
 async def init_term_session(client: httpx.AsyncClient, term: str) -> None:
@@ -22,13 +30,17 @@ async def init_term_session(client: httpx.AsyncClient, term: str) -> None:
     Without step (2), searchResults always returns totalCount: 0.
     """
 
-    r = await client.get(
+    r = await _request(
+        client,
+        "GET",
         f"{BASE_URL}/classSearch/getTerms",
         params={"searchTerm": term, "offset": 1, "max": 1},
     )
     r.raise_for_status()
 
-    r = await client.post(
+    r = await _request(
+        client,
+        "POST",
         f"{BASE_URL}/term/search",
         params={"mode": "search"},
         data={
@@ -53,7 +65,9 @@ async def fetch_courses(client: httpx.AsyncClient, subject: str, term: str) -> l
     offset = 0
 
     while True:
-        r = await client.get(
+        r = await _request(
+            client,
+            "GET",
             f"{BASE_URL}/searchResults/searchResults",
             params={
                 "txt_subject": subject,
@@ -87,7 +101,9 @@ async def fetch_description(client: httpx.AsyncClient, crn: str, term: str) -> d
     Returns raw HTML; parse it with html_parser.py.
     """
 
-    r = await client.post(
+    r = await _request(
+        client,
+        "POST",
         f"{BASE_URL}/searchResults/getCourseDescription",
         data={"term": term, "courseReferenceNumber": crn},
     )
@@ -116,7 +132,9 @@ async def fetch_subjects(
     if unique_session_id:
         params["uniqueSessionId"] = unique_session_id
 
-    r = await client.get(
+    r = await _request(
+        client,
+        "GET",
         f"{BASE_URL}/classSearch/get_subject",
         params=params,
     )
@@ -131,10 +149,22 @@ async def fetch_terms(
     GET /classSearch/getTerms with pagination.
     """
 
-    r = await client.get(
+    r = await _request(
+        client,
+        "GET",
         f"{BASE_URL}/classSearch/getTerms",
         params={"searchTerm": search_term, "offset": offset, "max": max_items},
     )
     r.raise_for_status()
     return json_list(r.json())
 
+
+__all__ = [
+    "AuroraBudgetBlocked",
+    "make_client",
+    "init_term_session",
+    "fetch_courses",
+    "fetch_description",
+    "fetch_subjects",
+    "fetch_terms",
+]
