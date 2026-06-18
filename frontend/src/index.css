@@ -26,11 +26,13 @@ body {
   font-family: var(--font-family-sans);
   background-color: var(--color-bison-cream);
   color: var(--color-bison-text);
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 #root {
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .font-heading {
