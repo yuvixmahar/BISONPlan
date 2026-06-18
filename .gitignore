@@ -38,8 +38,9 @@ frontend/.env.local
 # Cursor misc
 .cursor/
 
-# Local-only production readiness tracker (not for GitHub)
+# Local-only design / readiness docs (not for GitHub)
 PRODUCTION-READINESS.md
+AURORA-API-FOOTPRINT.md
 
 # Editor / OS junk
 .vscode/
