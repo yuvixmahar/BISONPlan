@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { getCourseDescription } from "../api/client.js";
 import {
   getCourseCode,
@@ -11,12 +12,17 @@ import {
   getMeetingsWithFaculty,
   splitSectionInfo,
 } from "../utils/course.js";
+import { handleFocusTrap } from "../utils/focusTrap.js";
 import { formatTimeRangeFromHhmm } from "../utils/time.js";
 
 const DRAWER_TRANSITION_MS = 300;
 
 export default function QuickViewDrawer({ open, course, termCode, onClose }) {
+  const titleId = useId();
+  const subtitleId = useId();
   const panelRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const returnFocusRef = useRef(null);
   const [activeCourse, setActiveCourse] = useState(null);
   const [visible, setVisible] = useState(false);
   const [isEntering, setIsEntering] = useState(false);
@@ -48,6 +54,7 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
       return;
     }
 
+    returnFocusRef.current = document.activeElement;
     setActiveCourse(course);
     setVisible(false);
     setIsEntering(false);
@@ -87,13 +94,44 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
   }, [visible]);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) return undefined;
+
+    const root = document.getElementById("root");
+    root?.setAttribute("aria-hidden", "true");
+
+    const frame = requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
+
     function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      handleFocusTrap(event, panelRef.current);
     }
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", handleKeyDown);
+      root?.removeAttribute("aria-hidden");
+    };
   }, [visible, onClose]);
+
+  useEffect(() => {
+    if (open) return;
+
+    const root = document.getElementById("root");
+    root?.removeAttribute("aria-hidden");
+
+    const returnTarget = returnFocusRef.current;
+    if (returnTarget instanceof HTMLElement && returnTarget.isConnected) {
+      returnTarget.focus();
+    }
+    returnFocusRef.current = null;
+  }, [open]);
 
   useEffect(() => {
     if (!open || !activeCourse || !termCode) return;
@@ -122,7 +160,7 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
 
   if (!activeCourse) return null;
 
-  return (
+  return createPortal(
     <div
       className={`fixed inset-0 z-60 ${
         isEntering
@@ -132,18 +170,17 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
             : "pointer-events-none opacity-0 transition-opacity duration-300 ease-in-out"
       }`}
     >
-      <button
-        type="button"
+      <div
         className="absolute inset-0 bg-bison-brown/50"
         onClick={onClose}
-        aria-label="Close quick view overlay"
-        tabIndex={visible ? 0 : -1}
+        aria-hidden="true"
       />
       <aside
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label={code ? `Course details for ${code}` : "Course details"}
+        aria-labelledby={titleId}
+        aria-describedby={subtitleId}
         onAnimationEnd={handlePanelAnimationEnd}
         className={`absolute right-0 top-0 flex h-full w-full max-w-xl flex-col border-l border-bison-border bg-white shadow-2xl ${
           isEntering
@@ -155,37 +192,45 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
       >
         <div className="sticky top-0 z-10 flex shrink-0 items-start justify-between gap-3 border-b border-bison-border bg-white p-4">
           <div className="min-w-0">
-            <div className="font-heading text-xl text-bison-text">{code}</div>
-            <div className="text-sm text-bison-text-muted">{title}</div>
+            <h2 id={titleId} className="font-heading text-xl text-bison-text">
+              {code}
+            </h2>
+            <p id={subtitleId} className="text-sm text-bison-text-muted">
+              {title}
+            </p>
             {section ? (
-              <div className="mt-1 text-xs text-bison-text-muted">Section {section}</div>
+              <p className="mt-1 text-xs text-bison-text-muted">Section {section}</p>
             ) : null}
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded border border-bison-border px-2 py-1 text-sm hover:bg-bison-gold/10"
+            className="shrink-0 cursor-pointer rounded border border-bison-border px-2 py-1 text-sm hover:bg-bison-gold/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bison-gold focus-visible:ring-offset-2"
           >
             Close
           </button>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-scroll p-4">
-          <section>
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-bison-text-muted">
+          <section aria-labelledby={`${titleId}-meetings`}>
+            <h3
+              id={`${titleId}-meetings`}
+              className="mb-2 text-xs font-semibold uppercase tracking-wide text-bison-text-muted"
+            >
               Meeting Details
-            </div>
+            </h3>
             {meetings.length === 0 ? (
-              <div className="text-sm text-bison-text-muted">No meeting details available.</div>
+              <p className="text-sm text-bison-text-muted">No meeting details available.</p>
             ) : (
-              <div className="space-y-3">
+              <ul className="space-y-3">
                 {meetings.map(({ meetingTime: mt, instructor: meetingInstructor }, idx) => {
                   const days = getMeetingDayLabels(mt).join(" ");
                   const time = formatTimeRangeFromHhmm(mt.beginTime, mt.endTime);
                   const location = getMeetingLocation(mt);
                   const type = mt.meetingTypeDescription || mt.meetingType || "Class";
                   return (
-                    <div
+                    <li
                       key={`${idx}-${mt.beginTime}-${mt.endTime}`}
                       className="rounded-lg border border-bison-border p-3"
                     >
@@ -202,70 +247,82 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
                           {type}
                         </span>
                       </div>
-                      <div className="text-sm text-bison-text">
+                      <p className="text-sm text-bison-text">
                         <span className="font-medium">Instructor:</span>{" "}
                         {meetingInstructor || instructor || "TBA"}
-                      </div>
-                      <div className="text-sm text-bison-text">
+                      </p>
+                      <p className="text-sm text-bison-text">
                         <span className="font-medium">Location:</span> {location}
-                      </div>
-                      <div className="text-sm text-bison-text">
+                      </p>
+                      <p className="text-sm text-bison-text">
                         <span className="font-medium">Dates:</span> {mt.startDate || "?"} -{" "}
                         {mt.endDate || "?"}
-                      </div>
-                    </div>
+                      </p>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             )}
           </section>
 
-          <section>
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-bison-text-muted">
+          <section aria-labelledby={`${titleId}-description`}>
+            <h3
+              id={`${titleId}-description`}
+              className="mb-2 text-xs font-semibold uppercase tracking-wide text-bison-text-muted"
+            >
               Course Description
-            </div>
-            <div className="text-sm leading-relaxed text-bison-text">
+            </h3>
+            <p
+              role="status"
+              aria-live="polite"
+              aria-busy={detailLoading}
+              className="text-sm leading-relaxed text-bison-text"
+            >
               {detailLoading
                 ? "Loading description..."
                 : detailError
                   ? detailError
                   : detailData?.description || "No description available."}
-            </div>
+            </p>
           </section>
 
           {prereqSplit.main || coreqSplit.main || sectionInfoText ? (
-            <section>
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-bison-text-muted">
+            <section aria-labelledby={`${titleId}-requisites`}>
+              <h3
+                id={`${titleId}-requisites`}
+                className="mb-2 text-xs font-semibold uppercase tracking-wide text-bison-text-muted"
+              >
                 Requisites
-              </div>
+              </h3>
               {prereqSplit.main ? (
                 <div className="mb-3">
-                  <div className="mb-1 text-xs font-semibold text-bison-text-muted">
+                  <h4 className="mb-1 text-xs font-semibold text-bison-text-muted">
                     Prerequisites
-                  </div>
-                  <div className="text-sm leading-relaxed text-bison-text">{prereqSplit.main}</div>
+                  </h4>
+                  <p className="text-sm leading-relaxed text-bison-text">{prereqSplit.main}</p>
                 </div>
               ) : null}
               {coreqSplit.main ? (
                 <div>
-                  <div className="mb-1 text-xs font-semibold text-bison-text-muted">
+                  <h4 className="mb-1 text-xs font-semibold text-bison-text-muted">
                     Corequisites
-                  </div>
-                  <div className="text-sm leading-relaxed text-bison-text">{coreqSplit.main}</div>
+                  </h4>
+                  <p className="text-sm leading-relaxed text-bison-text">{coreqSplit.main}</p>
                 </div>
               ) : null}
               {sectionInfoText ? (
                 <div className="mt-3 rounded-md border border-bison-border bg-bison-cream p-3">
-                  <div className="mb-1 text-xs font-semibold text-bison-text">
+                  <h4 className="mb-1 text-xs font-semibold text-bison-text">
                     Section Information
-                  </div>
-                  <div className="text-sm leading-relaxed text-bison-text">{sectionInfoText}</div>
+                  </h4>
+                  <p className="text-sm leading-relaxed text-bison-text">{sectionInfoText}</p>
                 </div>
               ) : null}
             </section>
           ) : null}
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body
   );
 }
