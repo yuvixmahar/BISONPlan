@@ -2,9 +2,9 @@ from datetime import datetime
 
 from ..config import (
     AURORA_DAILY_BUDGET,
-    AURORA_SNOOZE_END_HOUR,
-    AURORA_SNOOZE_START_HOUR,
     AURORA_TIMEZONE,
+    cache_ttl_seconds,
+    is_quiet_hours,
 )
 
 
@@ -16,7 +16,7 @@ class AuroraBudgetBlocked(Exception):
 
 
 class AuroraBudget:
-    """In-process daily Aurora HTTP budget with overnight snooze (CST)."""
+    """In-process daily Aurora HTTP budget."""
 
     def __init__(self) -> None:
         self._count = 0
@@ -28,14 +28,6 @@ class AuroraBudget:
             self._day = today
             self._count = 0
 
-    def is_snoozed(self) -> bool:
-        hour = datetime.now(AURORA_TIMEZONE).hour
-        if AURORA_SNOOZE_START_HOUR == AURORA_SNOOZE_END_HOUR:
-            return False
-        if AURORA_SNOOZE_START_HOUR < AURORA_SNOOZE_END_HOUR:
-            return AURORA_SNOOZE_START_HOUR <= hour < AURORA_SNOOZE_END_HOUR
-        return hour >= AURORA_SNOOZE_START_HOUR or hour < AURORA_SNOOZE_END_HOUR
-
     def used(self) -> int:
         self._reset_if_new_day()
         return self._count
@@ -46,11 +38,6 @@ class AuroraBudget:
 
     def assert_can_request(self) -> None:
         self._reset_if_new_day()
-        if self.is_snoozed():
-            raise AuroraBudgetBlocked(
-                "Aurora requests are paused overnight (11 PM–7 AM CST). Showing cached data when available.",
-                "snooze",
-            )
         if self._count >= AURORA_DAILY_BUDGET:
             raise AuroraBudgetBlocked(
                 f"Daily Aurora request budget ({AURORA_DAILY_BUDGET}) reached. Cached data only until midnight CST.",
@@ -67,7 +54,8 @@ class AuroraBudget:
             "daily_budget": AURORA_DAILY_BUDGET,
             "used_today": self._count,
             "remaining_today": self.remaining(),
-            "snoozed": self.is_snoozed(),
+            "quiet_hours": is_quiet_hours(),
+            "cache_ttl_seconds": cache_ttl_seconds(),
         }
 
 
