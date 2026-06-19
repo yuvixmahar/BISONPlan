@@ -5,14 +5,9 @@ from backend.main import app
 
 
 @pytest.fixture(autouse=True)
-def reset_runtime_state(tmp_path, monkeypatch):
-    # Give every test an isolated, empty SQLite DB so DB reads return nothing
-    # and tests control behaviour entirely through Aurora mocks.
-    db_file = str(tmp_path / "test.db")
-    monkeypatch.setattr("backend.db.DB_PATH", db_file)
-    from backend.db import init_db
-    init_db()
-
+def reset_runtime_state():
+    # Reset shared in-memory state between tests so behaviour is controlled
+    # entirely through Aurora mocks.
     from backend.cache import cache
     from backend.services import aurora_budget as module
 
