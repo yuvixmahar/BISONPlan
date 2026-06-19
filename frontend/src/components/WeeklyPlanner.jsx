@@ -123,8 +123,7 @@ function CourseListDrawer({ courses, termKey, onRemoveCourse, open, onClose }) {
       {/* Sheet */}
       <div
         className="relative z-10 rounded-t-2xl bg-white shadow-xl flex flex-col max-h-[80vh] transition-transform duration-300 ease-out"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-        style={{ transform: animating ? "translateY(0)" : "translateY(100%)" }}
+        style={{ transform: animating ? "translateY(0)" : "translateY(100%)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
         role="dialog"
         aria-modal="true"
         aria-label="Planned courses"
