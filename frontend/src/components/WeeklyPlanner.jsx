@@ -430,7 +430,7 @@ function WeeklyScheduleGrid({ weekStart, events, calendarDays = 7 }) {
     <div className="space-y-3">
 
       {/* ── Mobile grid (< 640px) ── */}
-      <div className="sm:hidden grid w-full" style={{ gridTemplateColumns: `24px repeat(${calendarDays}, 1fr)`, gap: "2px", padding: "0 4px" }}>
+      <div className="sm:hidden grid w-full" style={{ gridTemplateColumns: `24px repeat(${calendarDays}, 1fr)`, gap: "2px", paddingRight: "4px" }}>
         <div />
         {weekDays.map((dayDate, i) => {
           const dateKey = toDateKey(dayDate);
