@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock the Vercel Analytics SDK so tests assert on what we send, not on the
-// network. vi.hoisted lets the mock factory reference the spy safely.
+// Mock the PostHog SDK so tests assert on what we send, not on the network.
+// vi.hoisted lets the mock factory reference the spy safely.
 const { trackMock } = vi.hoisted(() => ({ trackMock: vi.fn() }));
-vi.mock("@vercel/analytics", () => ({ track: trackMock }));
+vi.mock("posthog-js", () => ({
+  default: { init: vi.fn(), capture: trackMock },
+}));
 
 import { trackAddedToPlanner, trackCourseSearched } from "./analytics.js";
 
