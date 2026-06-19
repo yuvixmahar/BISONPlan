@@ -159,6 +159,34 @@ async def fetch_terms(
     return json_list(r.json())
 
 
+async def fetch_all_terms(client: httpx.AsyncClient) -> list[dict]:
+    """Fetch every term from Aurora in one go (loops pages until exhausted)."""
+    all_items: list[dict] = []
+    page_size = 50
+    offset = 1
+    while True:
+        page = await fetch_terms(client, offset=offset, max_items=page_size)
+        all_items.extend(page)
+        if len(page) < page_size:
+            break
+        offset += page_size
+    return all_items
+
+
+async def fetch_all_subjects(client: httpx.AsyncClient, term: str) -> list[dict]:
+    """Fetch every subject for a term from Aurora in one go (loops pages until exhausted)."""
+    all_items: list[dict] = []
+    page_size = 50
+    offset = 1
+    while True:
+        page = await fetch_subjects(client, term=term, search_term="", offset=offset, max_items=page_size)
+        all_items.extend(page)
+        if len(page) < page_size:
+            break
+        offset += page_size
+    return all_items
+
+
 __all__ = [
     "AuroraBudgetBlocked",
     "make_client",
@@ -167,4 +195,6 @@ __all__ = [
     "fetch_description",
     "fetch_subjects",
     "fetch_terms",
+    "fetch_all_terms",
+    "fetch_all_subjects",
 ]

@@ -15,7 +15,7 @@ async def test_terms_returns_503_on_aurora_failure(client, error_cls):
         request = httpx.Request("GET", "http://aurora")
         exc = httpx.HTTPStatusError("server error", request=request, response=httpx.Response(500, request=request))
 
-    with patch("backend.routers.terms.fetch_terms", new_callable=AsyncMock) as mock_fetch:
+    with patch("backend.routers.terms.fetch_all_terms", new_callable=AsyncMock) as mock_fetch:
         mock_fetch.side_effect = exc
         response = await client.get("/api/terms", params={"offset": 1, "max": 10})
 
@@ -29,7 +29,7 @@ async def test_terms_returns_503_on_aurora_failure(client, error_cls):
 @pytest.mark.asyncio
 async def test_terms_success_returns_live_items(client):
     page = [{"termCode": "202690", "description": "Fall 2026"}]
-    with patch("backend.routers.terms.fetch_terms", new_callable=AsyncMock) as mock_fetch:
+    with patch("backend.routers.terms.fetch_all_terms", new_callable=AsyncMock) as mock_fetch:
         mock_fetch.return_value = page
         response = await client.get("/api/terms", params={"offset": 1, "max": 10})
 
@@ -42,7 +42,7 @@ async def test_terms_success_returns_live_items(client):
 
 @pytest.mark.asyncio
 async def test_terms_regression_does_not_mask_failure_as_empty_success(client):
-    with patch("backend.routers.terms.fetch_terms", new_callable=AsyncMock) as mock_fetch:
+    with patch("backend.routers.terms.fetch_all_terms", new_callable=AsyncMock) as mock_fetch:
         mock_fetch.side_effect = httpx.TimeoutException("timed out", request=httpx.Request("GET", "http://aurora"))
         response = await client.get("/api/terms")
 
@@ -61,7 +61,7 @@ async def test_subjects_returns_503_on_aurora_failure(client, error_cls):
 
     with (
         patch("backend.routers.subjects.init_term_session", new_callable=AsyncMock),
-        patch("backend.routers.subjects.fetch_subjects", new_callable=AsyncMock) as mock_fetch,
+        patch("backend.routers.subjects.fetch_all_subjects", new_callable=AsyncMock) as mock_fetch,
     ):
         mock_fetch.side_effect = exc
         response = await client.get("/api/subjects", params={"term": "202690"})

@@ -1,13 +1,27 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from .config import cors_origins
+from .db import init_db
 from .limiter import limiter
 from .routers import courses, health, subjects, terms
+from .services.scheduler import refresh_priority_data, start_scheduler, stop_scheduler
 
-app = FastAPI(title="BISONplan API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    start_scheduler()
+    await refresh_priority_data()
+    yield
+    stop_scheduler()
+
+
+app = FastAPI(title="BISONplan API", version="0.1.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
