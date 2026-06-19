@@ -123,6 +123,7 @@ function CourseListDrawer({ courses, termKey, onRemoveCourse, open, onClose }) {
       {/* Sheet */}
       <div
         className="relative z-10 rounded-t-2xl bg-white shadow-xl flex flex-col max-h-[80vh] transition-transform duration-300 ease-out"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
         style={{ transform: animating ? "translateY(0)" : "translateY(100%)" }}
         role="dialog"
         aria-modal="true"
@@ -144,10 +145,9 @@ function CourseListDrawer({ courses, termKey, onRemoveCourse, open, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="text-bison-text-muted hover:text-bison-text text-xl leading-none px-1"
-            aria-label="Close"
+            className="shrink-0 cursor-pointer rounded border border-bison-border px-2 py-1 text-sm hover:bg-bison-gold/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bison-gold focus-visible:ring-offset-2"
           >
-            ×
+            Close
           </button>
         </div>
 
@@ -192,8 +192,6 @@ function CourseListDrawer({ courses, termKey, onRemoveCourse, open, onClose }) {
           })}
         </div>
 
-        {/* Safe area spacer for iPhone home bar */}
-        <div className="h-safe-bottom pb-4" />
       </div>
     </div>
   );
@@ -209,22 +207,81 @@ function abbreviateSectionType(raw) {
   return "";
 }
 
-function PlannerEventBlock({ ev, variant, style, title, mode = "desktop" }) {
+function fullSectionType(raw) {
+  if (!raw) return "";
+  const s = raw.toLowerCase();
+  if (s.includes("lab")) return "Laboratory";
+  if (s.includes("tut")) return "Tutorial";
+  if (s.includes("lec")) return "Lecture";
+  if (s.includes("semi")) return "Seminar";
+  return raw;
+}
+
+function EventPopover({ ev, onClose }) {
+  const ref = useRef(null);
+  const timeLine = formatTimeRangeCompact(ev.start, ev.end);
+  const type = fullSectionType(ev.sectionType);
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    }
+    document.addEventListener("pointerdown", handleClick);
+    return () => document.removeEventListener("pointerdown", handleClick);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute z-50 left-1/2 -translate-x-1/2 bottom-[calc(100%+6px)] w-44 rounded-lg border border-bison-gold bg-white shadow-lg px-3 py-2 text-bison-brown"
+      role="tooltip"
+    >
+      {/* Arrow */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0"
+        style={{ borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderTop: "6px solid #d4a855" }} />
+      <div className="font-semibold text-[11px] leading-tight mb-1">
+        {ev.code}{ev.section ? ` ${ev.section}` : ""}
+      </div>
+      <div className="text-[10px] leading-snug space-y-0.5">
+        <div>{timeLine}</div>
+        {type ? <div>{type}</div> : null}
+        <div>{ev.location || "TBA"}</div>
+        {ev.instructor ? <div className="text-bison-brown/70">{ev.instructor}</div> : null}
+      </div>
+    </div>
+  );
+}
+
+function PlannerEventBlock({ ev, variant, style, title, mode = "desktop", calendarDays = 5 }) {
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const typeAbbr = abbreviateSectionType(ev.sectionType);
-  const codeLine = `${ev.code}${ev.section ? ` ${ev.section}` : ""}${typeAbbr ? ` – ${typeAbbr}` : ""}`;
+  const codeSection = `${ev.code}${ev.section ? ` ${ev.section}` : ""}`;
+  const codeLine = `${codeSection}${typeAbbr ? ` – ${typeAbbr}` : ""}`;
   const timeLine = formatTimeRangeCompact(ev.start, ev.end);
   const locationLine = ev.location || "TBA";
 
   if (mode === "mobile") {
+    const is7day = calendarDays === 7;
     return (
       <div
-        className="absolute box-border flex h-full min-h-0 flex-col overflow-hidden rounded border border-bison-gold bg-[#f7e6bb] text-bison-brown shadow-sm px-0.5 py-px"
+        className="absolute box-border flex h-full min-h-0 flex-col overflow-hidden rounded border border-bison-gold bg-[#f7e6bb] text-bison-brown shadow-sm px-0.5 py-px cursor-pointer"
         style={style}
         title={title}
+        onPointerDown={(e) => { e.stopPropagation(); setPopoverOpen((o) => !o); }}
       >
-        <div className="font-semibold leading-[1.2] text-[8px] break-words">{codeLine}</div>
-        <div className="leading-[1.2] text-[7.5px] break-words text-bison-brown/80">{timeLine}</div>
-        <div className="leading-[1.2] text-[7px] break-words text-bison-brown/70">{locationLine}</div>
+        {is7day ? (
+          <>
+            <div className="font-semibold leading-[1.2] text-[8px] break-words">{codeSection}</div>
+            <div className="leading-[1.2] text-[7.5px] break-words text-bison-brown/80">{timeLine}</div>
+          </>
+        ) : (
+          <>
+            <div className="font-semibold leading-[1.2] text-[8px] break-words">{codeLine}</div>
+            <div className="leading-[1.2] text-[7.5px] break-words text-bison-brown/80">{timeLine}</div>
+            <div className="leading-[1.2] text-[7px] break-words text-bison-brown/70">{locationLine}</div>
+          </>
+        )}
+        {popoverOpen && <EventPopover ev={ev} onClose={() => setPopoverOpen(false)} />}
       </div>
     );
   }
@@ -414,6 +471,7 @@ function WeeklyScheduleGrid({ weekStart, events, calendarDays = 7 }) {
               ev={ev}
               variant={variant}
               mode={mode}
+              calendarDays={calendarDays}
               title={buildEventTooltip(ev)}
               style={{
                 top: `calc(${topPct}% + ${gap / 2}px)`,
@@ -592,7 +650,7 @@ export default function WeeklyPlanner({
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-bison-border bg-white pt-3 pr-1 pb-3 sm:p-3 md:p-4">
+      <div className="mt-4 rounded-xl border border-bison-border bg-white pl-1 pt-3 pr-1 pb-3 sm:p-3 md:p-4">
         {plannedCourses.length === 0 ? (
           <div className="text-sm text-bison-text-muted px-1 py-2">
             No courses added yet for {activeTermLabel.toLowerCase()}. Use &ldquo;Add to Planner&rdquo; from
