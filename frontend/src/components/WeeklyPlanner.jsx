@@ -584,10 +584,10 @@ export default function WeeklyPlanner({
         </div>
       </div>
 
-      <div className=”mt-4 rounded-xl border border-bison-border bg-white p-3 sm:p-3 md:p-4”>
+      <div className="mt-4 rounded-xl border border-bison-border bg-white p-3 sm:p-3 md:p-4">
         {plannedCourses.length === 0 ? (
-          <div className=”text-sm text-bison-text-muted px-1 py-2”>
-            No courses added yet for {activeTermLabel.toLowerCase()}. Use “Add to Planner” from
+          <div className="text-sm text-bison-text-muted px-1 py-2">
+            No courses added yet for {activeTermLabel.toLowerCase()}. Use "Add to Planner" from
             search results.
           </div>
         ) : (
