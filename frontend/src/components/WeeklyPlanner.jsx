@@ -430,7 +430,7 @@ function WeeklyScheduleGrid({ weekStart, events, calendarDays = 7 }) {
     <div className="space-y-3">
 
       {/* ── Mobile grid (< 640px) ── */}
-      <div className="sm:hidden grid w-full" style={{ gridTemplateColumns: `12px repeat(${calendarDays}, 1fr)`, gap: "2px", padding: "0 4px" }}>
+      <div className="sm:hidden grid w-full" style={{ gridTemplateColumns: `20px repeat(${calendarDays}, 1fr)`, gap: "2px", padding: "0 4px" }}>
         <div />
         {weekDays.map((dayDate, i) => {
           const dateKey = toDateKey(dayDate);
@@ -445,9 +445,9 @@ function WeeklyScheduleGrid({ weekStart, events, calendarDays = 7 }) {
         })}
         <div className={`relative ${gridHeightClass}`}>
           {hours.map((minute) => (
-            <div key={minute} className="absolute left-0 text-[7px] text-bison-text-muted -translate-y-1/2 leading-none"
+            <div key={minute} className="absolute left-0 right-0 text-[8px] text-bison-text-muted -translate-y-1/2 leading-none text-right pr-0.5"
               style={{ top: `${((minute - timeRange.startMinutes) / timeRange.totalMinutes) * 100}%` }}>
-              {formatMinutesAmPm(minute).replace(/:00/g, "").replace(/ /g, "")}
+              {formatMinutesAmPm(minute).replace(/:00/g, "").replace(/ /g, "").toLowerCase()}
             </div>
           ))}
         </div>
