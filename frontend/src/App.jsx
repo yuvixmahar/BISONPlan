@@ -102,13 +102,13 @@ export default function App() {
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-bison-cream">
       <header className="z-50 shrink-0 border-b border-bison-brown-dark bg-bison-brown shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
-          <div className="font-heading text-lg text-bison-gold tracking-tight shrink-0">BISONplan</div>
+          <div className="font-heading text-lg md:text-xl text-bison-gold tracking-tight shrink-0">BISONplan</div>
           <nav className="inline-flex rounded-lg border border-white/20 bg-white/5 p-0.5">
             <button
               type="button"
               aria-current={page === "search" ? "page" : undefined}
               onClick={() => setPage("search")}
-              className={`px-3 py-1 text-xs rounded-md transition-colors ${
+              className={`px-3 py-1 text-xs md:text-sm md:px-4 md:py-1.5 rounded-md transition-colors ${
                 page === "search"
                   ? "bg-bison-gold text-bison-brown font-semibold"
                   : "text-white/90 hover:bg-white/10"
@@ -120,7 +120,7 @@ export default function App() {
               type="button"
               aria-current={page === "planner" ? "page" : undefined}
               onClick={() => setPage("planner")}
-              className={`px-3 py-1 text-xs rounded-md transition-colors ${
+              className={`px-3 py-1 text-xs md:text-sm md:px-4 md:py-1.5 rounded-md transition-colors ${
                 page === "planner"
                   ? "bg-bison-gold text-bison-brown font-semibold"
                   : "text-white/90 hover:bg-white/10"
