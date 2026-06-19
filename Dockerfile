@@ -20,17 +20,23 @@ FROM python_base AS prod
 
 RUN addgroup -S appuser && adduser -S appuser -G appuser -h /app
 
+# su-exec lets the entrypoint drop from root to appuser after fixing volume perms
+RUN apk add --no-cache su-exec
+
 WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
 COPY backend ./backend
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app"
 ENV PORT=8000
 
-USER appuser
-
+# Run as root so the entrypoint can chown the mounted volume; it then exec's
+# the server as appuser via su-exec.
 EXPOSE 8000
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
