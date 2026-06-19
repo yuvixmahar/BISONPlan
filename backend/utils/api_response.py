@@ -5,6 +5,7 @@ def api_response(
     data,
     budget_message: str | None = None,
     cache_ttl_seconds: int | None = None,
+    total: int | None = None,
 ) -> dict:
     payload = {
         "success": success,
@@ -16,4 +17,6 @@ def api_response(
         payload["budget_message"] = budget_message
     if cache_ttl_seconds is not None:
         payload["cache_ttl_seconds"] = cache_ttl_seconds
+    if total is not None:
+        payload["total"] = total
     return payload

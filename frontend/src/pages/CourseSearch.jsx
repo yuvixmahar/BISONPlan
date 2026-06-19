@@ -127,7 +127,7 @@ export default function CourseSearch({
   }, [termCode, loadInitialSubjects]);
 
   const [refreshTick, setRefreshTick] = useState(0);
-  const { data: courses, loading, refreshing, error, isStale, cachedAt, cacheTtlSeconds } =
+  const { data: courses, loading, loadingMore, refreshing, error, isStale, cachedAt, cacheTtlSeconds } =
     useCourses(subject, termCode, refreshTick);
 
   async function loadMoreTerms() {
@@ -587,12 +587,19 @@ export default function CourseSearch({
               {error}
             </div>
           ) : (
-            <CourseList
-              courses={filteredCourses}
-              termCode={termCode}
-              onQuickView={setQuickViewCourse}
-              onAddToPlanner={addCourseToPlanner}
-            />
+            <>
+              <CourseList
+                courses={filteredCourses}
+                termCode={termCode}
+                onQuickView={setQuickViewCourse}
+                onAddToPlanner={addCourseToPlanner}
+              />
+              {loadingMore ? (
+                <div className="text-xs text-bison-text-muted mt-3">
+                  Loading the rest of the courses…
+                </div>
+              ) : null}
+            </>
           )}
           {hasCourseSelection && !loading && !error && filteredCourses.length === 0 ? (
             <div className="text-bison-text-muted mt-4">Try adjusting your filters.</div>

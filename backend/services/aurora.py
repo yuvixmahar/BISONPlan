@@ -54,6 +54,41 @@ async def init_term_session(client: httpx.AsyncClient, term: str) -> None:
     r.raise_for_status()
 
 
+async def fetch_courses_page(
+    client: httpx.AsyncClient,
+    subject: str,
+    term: str,
+    offset: int = 0,
+    max_size: int = 50,
+) -> tuple[list[dict], int]:
+    """
+    GET a single page of /searchResults/searchResults.
+    Returns (courses, total_count) so callers can paginate or loop.
+    """
+
+    r = await _request(
+        client,
+        "GET",
+        f"{BASE_URL}/searchResults/searchResults",
+        params={
+            "txt_subject": subject,
+            "txt_term": term,
+            "startDatepicker": "",
+            "endDatepicker": "",
+            "pageOffset": offset,
+            "pageMaxSize": max_size,
+            "sortColumn": "subjectDescription",
+            "sortDirection": "asc",
+        },
+    )
+    r.raise_for_status()
+
+    payload = r.json()
+    total = int(payload.get("totalCount") or 0)
+    courses = payload.get("data") or []
+    return courses, total
+
+
 async def fetch_courses(client: httpx.AsyncClient, subject: str, term: str) -> list[dict]:
     """
     GET /searchResults/searchResults with pagination.
@@ -65,31 +100,10 @@ async def fetch_courses(client: httpx.AsyncClient, subject: str, term: str) -> l
     offset = 0
 
     while True:
-        r = await _request(
-            client,
-            "GET",
-            f"{BASE_URL}/searchResults/searchResults",
-            params={
-                "txt_subject": subject,
-                "txt_term": term,
-                "startDatepicker": "",
-                "endDatepicker": "",
-                "pageOffset": offset,
-                "pageMaxSize": page_size,
-                "sortColumn": "subjectDescription",
-                "sortDirection": "asc",
-            },
-        )
-        r.raise_for_status()
-
-        payload = r.json()
-        total = int(payload.get("totalCount") or 0)
-        courses = payload.get("data") or []
-
+        courses, total = await fetch_courses_page(client, subject, term, offset, page_size)
         all_courses.extend(courses)
-        if len(all_courses) >= total:
+        if len(all_courses) >= total or not courses:
             break
-
         offset += page_size
 
     return all_courses
@@ -192,6 +206,7 @@ __all__ = [
     "make_client",
     "init_term_session",
     "fetch_courses",
+    "fetch_courses_page",
     "fetch_description",
     "fetch_subjects",
     "fetch_terms",

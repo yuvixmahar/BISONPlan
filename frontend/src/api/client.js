@@ -7,10 +7,21 @@ const client = axios.create({
   baseURL: apiBaseUrl,
 });
 
-export async function getCourses(subject, term, includeDescriptions = false) {
-  const res = await client.get("/courses", {
-    params: { subject, term, includeDescriptions },
-  });
+export async function getCourses(
+  subject,
+  term,
+  includeDescriptions = false,
+  offset = null,
+  limit = null
+) {
+  const params = { subject, term, includeDescriptions };
+  // When a limit is given, request a single page (offset/limit) so the caller
+  // can paint the first page fast and load the rest in the background.
+  if (limit != null) {
+    params.offset = offset ?? 0;
+    params.limit = limit;
+  }
+  const res = await client.get("/courses", { params });
   return res.data;
 }
 
