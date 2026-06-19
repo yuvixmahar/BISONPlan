@@ -551,10 +551,10 @@ export default function WeeklyPlanner({
     PLANNER_TERMS.find((term) => term.key === activePlannerTerm)?.label || activePlannerTerm;
 
   return (
-    <section className="mt-8">
+    <section>
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="font-heading text-2xl text-bison-text">Week at a Glance</h2>
+          <h2 className="font-heading text-3xl text-bison-text">Week at a Glance</h2>
           <p className="text-sm text-bison-text-muted mt-1">
             Browse week by week from the first to last class date. Summer, fall, and winter all
             use the same calendar view.
