@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getCourses } from "../api/client.js";
+import { trackCourseSearched } from "../utils/analytics.js";
 import { DEFAULT_SEAT_CACHE_TTL_SECONDS } from "../utils/seatRefresh.js";
 
 // Paint the first courses fast, then pull the rest in the background (in large
@@ -67,6 +68,8 @@ export default function useCourses(subject, term, refreshTick = 0) {
         setIsStale(first.source === "stale" || first.source === "cached_only");
         setCachedAt(first.cached_at ?? null);
         setCacheTtlSeconds(first.cache_ttl_seconds ?? DEFAULT_SEAT_CACHE_TTL_SECONDS);
+        // Count a real search (initial load only, not background seat refreshes).
+        if (!isRefresh) trackCourseSearched(subject, term);
       } catch (e) {
         if (cancelled) return;
         setError(e?.message || "Failed to load courses");

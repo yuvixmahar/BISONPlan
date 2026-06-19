@@ -14,6 +14,7 @@ import {
 } from "./utils/planner.js";
 import { loadPlannerState, savePlannerState } from "./utils/plannerStorage.js";
 import { acceptDisclaimer, hasAcceptedDisclaimer } from "./utils/disclaimer.js";
+import { trackAddedToPlanner } from "./utils/analytics.js";
 
 function getTermLabel(termKey) {
   return PLANNER_TERMS.find((term) => term.key === termKey)?.label || termKey;
@@ -72,6 +73,8 @@ export default function App() {
         message: `${getCourseDisplayLabel(course)} added to ${getTermLabel(key)} planner.`,
       });
       setActivePlannerTerm(key);
+      // Count a successful planner add (skips duplicates/conflicts handled above).
+      trackAddedToPlanner(key);
       return { ...prev, [key]: [...existing, plannerCourse] };
     });
   }
