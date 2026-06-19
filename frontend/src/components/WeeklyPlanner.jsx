@@ -216,28 +216,32 @@ function fullSectionType(raw) {
   return raw;
 }
 
-function EventPopover({ ev, onClose }) {
-  const ref = useRef(null);
+function EventPopover({ ev, anchorRect }) {
   const timeLine = formatTimeRangeCompact(ev.start, ev.end);
   const type = fullSectionType(ev.sectionType);
+  const POPOVER_WIDTH = 176; // w-44 = 11rem = 176px
 
-  useEffect(() => {
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) onClose();
-    }
-    document.addEventListener("pointerdown", handleClick);
-    return () => document.removeEventListener("pointerdown", handleClick);
-  }, [onClose]);
+  // Position above the card; flip below if not enough room at top
+  const spaceAbove = anchorRect.top;
+  const spaceBelow = window.innerHeight - anchorRect.bottom;
+  const showBelow = spaceAbove < 120 && spaceBelow > spaceAbove;
+
+  const top = showBelow
+    ? anchorRect.bottom + 6
+    : anchorRect.top - 6;
+  const cardCenterX = anchorRect.left + anchorRect.width / 2;
+  const left = Math.min(
+    Math.max(cardCenterX - POPOVER_WIDTH / 2, 8),
+    window.innerWidth - POPOVER_WIDTH - 8
+  );
 
   return (
     <div
-      ref={ref}
-      className="absolute z-50 left-1/2 -translate-x-1/2 bottom-[calc(100%+6px)] w-44 rounded-lg border border-bison-gold bg-white shadow-lg px-3 py-2 text-bison-brown"
+      className="fixed z-[200] w-44 rounded-lg border border-bison-gold bg-white shadow-lg px-3 py-2 text-bison-brown"
+      style={{ top, left, transform: showBelow ? "none" : "translateY(-100%)" }}
       role="tooltip"
+      onPointerDown={(e) => e.stopPropagation()}
     >
-      {/* Arrow */}
-      <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0"
-        style={{ borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderTop: "6px solid #d4a855" }} />
       <div className="font-semibold text-[11px] leading-tight mb-1">
         {ev.code}{ev.section ? ` ${ev.section}` : ""}
       </div>
@@ -251,8 +255,7 @@ function EventPopover({ ev, onClose }) {
   );
 }
 
-function PlannerEventBlock({ ev, variant, style, title, mode = "desktop", calendarDays = 5 }) {
-  const [popoverOpen, setPopoverOpen] = useState(false);
+function PlannerEventBlock({ ev, variant, style, title, mode = "desktop", calendarDays = 5, isPopoverOpen = false, anchorRect = null, onPopoverToggle }) {
   const typeAbbr = abbreviateSectionType(ev.sectionType);
   const codeSection = `${ev.code}${ev.section ? ` ${ev.section}` : ""}`;
   const codeLine = `${codeSection}${typeAbbr ? ` – ${typeAbbr}` : ""}`;
@@ -263,10 +266,10 @@ function PlannerEventBlock({ ev, variant, style, title, mode = "desktop", calend
     const is7day = calendarDays === 7;
     return (
       <div
-        className="absolute box-border flex h-full min-h-0 flex-col overflow-hidden rounded border border-bison-gold bg-[#f7e6bb] text-bison-brown shadow-sm px-0.5 py-px cursor-pointer"
+        className="absolute box-border flex h-full min-h-0 flex-col overflow-visible rounded border border-bison-gold bg-[#f7e6bb] text-bison-brown shadow-sm px-0.5 py-px cursor-pointer"
         style={style}
         title={title}
-        onPointerDown={(e) => { e.stopPropagation(); setPopoverOpen((o) => !o); }}
+        onPointerDown={(e) => { e.stopPropagation(); onPopoverToggle?.(e.currentTarget.getBoundingClientRect()); }}
       >
         {is7day ? (
           <>
@@ -280,7 +283,7 @@ function PlannerEventBlock({ ev, variant, style, title, mode = "desktop", calend
             <div className="leading-[1.2] text-[7px] break-words text-bison-brown/70">{locationLine}</div>
           </>
         )}
-        {popoverOpen && <EventPopover ev={ev} onClose={() => setPopoverOpen(false)} />}
+        {isPopoverOpen && anchorRect && <EventPopover ev={ev} anchorRect={anchorRect} />}
       </div>
     );
   }
@@ -378,6 +381,7 @@ function WeeklyScheduleGrid({ weekStart, events, calendarDays = 7 }) {
     () => calendarDays === 5 ? allWeekDays.slice(0, 5) : allWeekDays,
     [allWeekDays, calendarDays]
   );
+  const [popoverState, setPopoverState] = useState(null); // { id, rect }
 
   const weekVisibleEvents = useMemo(() => {
     const list = [];
@@ -471,6 +475,9 @@ function WeeklyScheduleGrid({ weekStart, events, calendarDays = 7 }) {
               variant={variant}
               mode={mode}
               calendarDays={calendarDays}
+              isPopoverOpen={popoverState?.id === ev.id}
+              anchorRect={popoverState?.id === ev.id ? popoverState.rect : null}
+              onPopoverToggle={(rect) => setPopoverState((s) => s?.id === ev.id ? null : { id: ev.id, rect })}
               title={buildEventTooltip(ev)}
               style={{
                 top: `calc(${topPct}% + ${gap / 2}px)`,
@@ -489,7 +496,7 @@ function WeeklyScheduleGrid({ weekStart, events, calendarDays = 7 }) {
     <div className="space-y-3">
 
       {/* ── Mobile grid (< 640px) ── */}
-      <div className="sm:hidden rounded border border-bison-border overflow-hidden">
+      <div className="sm:hidden rounded border border-bison-border overflow-hidden" onPointerDown={() => setPopoverState(null)}>
         {/* Header row */}
         <div className="grid border-b border-bison-border" style={{ gridTemplateColumns: `24px repeat(${calendarDays}, 1fr)` }}>
           <div />
@@ -604,7 +611,7 @@ export default function WeeklyPlanner({
   );
   const [weekIndex, setWeekIndex] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [calendarDays, setCalendarDays] = useState(7);
+  const [calendarDays, setCalendarDays] = useState(() => window.innerWidth < 640 ? 5 : 7);
 
   useEffect(() => {
     setWeekIndex(findInitialWeekIndex(weekStarts));
@@ -657,7 +664,7 @@ export default function WeeklyPlanner({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="px-3 sm:px-0 space-y-4">
+            <div className="px-3 sm:px-0 space-y-2 sm:space-y-4">
               {/* Mobile: compact summary bar → opens bottom sheet */}
               <button
                 type="button"
