@@ -584,7 +584,7 @@ export default function WeeklyPlanner({
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-bison-border bg-white p-3 sm:p-3 md:p-4">
+      <div className="mt-4 rounded-xl border border-bison-border bg-white pt-3 pr-1 pb-3 sm:p-3 md:p-4">
         {plannedCourses.length === 0 ? (
           <div className="text-sm text-bison-text-muted px-1 py-2">
             No courses added yet for {activeTermLabel.toLowerCase()}. Use &ldquo;Add to Planner&rdquo; from
