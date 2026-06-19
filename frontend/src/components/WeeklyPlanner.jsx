@@ -390,8 +390,10 @@ function WeeklyScheduleGrid({ weekStart, events, calendarDays = 7 }) {
     return (
       <div
         key={`grid-${dateKey}-${mode}`}
-        className={`relative rounded border ${gridHeightClass} ${
-          hasPossibleClass ? "border-bison-border bg-bison-cream/40" : "border-bison-border/40 bg-bison-cream/10"
+        className={`relative ${gridHeightClass} ${
+          mode === "mobile"
+            ? `border-l border-bison-border/50 ${hasPossibleClass ? "bg-bison-cream/40" : "bg-bison-cream/10"}`
+            : `rounded border ${hasPossibleClass ? "border-bison-border bg-bison-cream/40" : "border-bison-border/40 bg-bison-cream/10"}`
         }`}
       >
         {hours.map((minute) => (
@@ -430,28 +432,34 @@ function WeeklyScheduleGrid({ weekStart, events, calendarDays = 7 }) {
     <div className="space-y-3">
 
       {/* ── Mobile grid (< 640px) ── */}
-      <div className="sm:hidden grid w-full" style={{ gridTemplateColumns: `24px repeat(${calendarDays}, 1fr)`, gap: "2px", padding: "0 1px" }}>
-        <div />
-        {weekDays.map((dayDate, i) => {
-          const dateKey = toDateKey(dayDate);
-          const dayKey = getDayKeyFromDate(dayDate);
-          const hasClass = events.some((ev) => ev.dayKey === dayKey && dateWithinRange(dayDate, ev.rangeStart, ev.rangeEnd));
-          return (
-            <div key={dateKey} className={`text-center rounded py-0.5 ${hasClass ? "bg-white" : "bg-bison-cream/60 text-bison-text-muted/60"}`}>
-              <div className="text-[9px] font-semibold leading-tight">{DAY_ABBR[i]}</div>
-              <div className="text-[8px] leading-tight">{dayDate.getDate()}</div>
-            </div>
-          );
-        })}
-        <div className={`relative ${gridHeightClass}`}>
-          {hours.map((minute) => (
-            <div key={minute} className="absolute left-0 right-0 text-[8px] text-bison-text-muted -translate-y-1/2 leading-none text-right pr-0.5"
-              style={{ top: `${((minute - timeRange.startMinutes) / timeRange.totalMinutes) * 100}%` }}>
-              {formatMinutesAmPm(minute).replace(/:00/g, "").replace(/ /g, "").toLowerCase()}
-            </div>
-          ))}
+      <div className="sm:hidden rounded border border-bison-border overflow-hidden">
+        {/* Header row */}
+        <div className="grid border-b border-bison-border" style={{ gridTemplateColumns: `24px repeat(${calendarDays}, 1fr)` }}>
+          <div />
+          {weekDays.map((dayDate, i) => {
+            const dateKey = toDateKey(dayDate);
+            const dayKey = getDayKeyFromDate(dayDate);
+            const hasClass = events.some((ev) => ev.dayKey === dayKey && dateWithinRange(dayDate, ev.rangeStart, ev.rangeEnd));
+            return (
+              <div key={dateKey} className={`text-center py-0.5 border-l border-bison-border/50 ${hasClass ? "bg-white" : "bg-bison-cream/60 text-bison-text-muted/60"}`}>
+                <div className="text-[9px] font-semibold leading-tight">{DAY_ABBR[i]}</div>
+                <div className="text-[8px] leading-tight">{dayDate.getDate()}</div>
+              </div>
+            );
+          })}
         </div>
-        {weekDays.map((dayDate) => renderDayColumn(dayDate, toDateKey(dayDate), "mobile"))}
+        {/* Body row: time labels + day columns */}
+        <div className="grid" style={{ gridTemplateColumns: `24px repeat(${calendarDays}, 1fr)` }}>
+          <div className={`relative ${gridHeightClass}`}>
+            {hours.map((minute) => (
+              <div key={minute} className="absolute left-0 right-0 text-[8px] text-bison-text-muted -translate-y-1/2 leading-none text-right pr-0.5"
+                style={{ top: `${((minute - timeRange.startMinutes) / timeRange.totalMinutes) * 100}%` }}>
+                {formatMinutesAmPm(minute).replace(/:00/g, "").replace(/ /g, "").toLowerCase()}
+              </div>
+            ))}
+          </div>
+          {weekDays.map((dayDate) => renderDayColumn(dayDate, toDateKey(dayDate), "mobile"))}
+        </div>
       </div>
 
       {/* ── Tablet grid (640px–1023px) ── full width, no scroll */}
