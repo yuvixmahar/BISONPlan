@@ -59,6 +59,11 @@ export default function CourseSearch({
   const [instructorFilter, setInstructorFilter] = useState("");
   const [quickViewCourse, setQuickViewCourse] = useState(null);
 
+  // Mobile-only collapse state. On desktop the controls/filters are always shown
+  // (md: classes win); these just drive the phone summary-bar/dropdown behaviour.
+  const [controlsOpen, setControlsOpen] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
   useEffect(() => {
     if (isActive) return;
     setTermMenuOpen(false);
@@ -129,6 +134,21 @@ export default function CourseSearch({
   const [refreshTick, setRefreshTick] = useState(0);
   const { data: courses, loading, loadingMore, refreshing, error, isStale, cachedAt, cacheTtlSeconds } =
     useCourses(subject, termCode, refreshTick);
+
+  // Changing the term or subject starts a fresh search: clear the "Find a
+  // course" box and every filter so results aren't narrowed by a prior pick.
+  useEffect(() => {
+    setQuery("");
+    setIncludeFullClasses(true);
+    setOnlyWaitlisted(false);
+    setCreditHour("");
+    setScheduleType("any");
+    setCampus("any");
+    setDeliveryMode("any");
+    setDayFilter("any");
+    setTimeFilter("any");
+    setInstructorFilter("");
+  }, [termCode, subject]);
 
   async function loadMoreTerms() {
     if (termsLoading || !termsHasMore || termsError) return;
@@ -247,6 +267,8 @@ export default function CourseSearch({
     setSubject(option.code);
     setSubjectInput(`${option.code} - ${option.description}`);
     setSubjectMenuOpen(false);
+    // On mobile, collapse the controls so the loaded course list is visible.
+    setControlsOpen(false);
   }
 
   function onSubjectInputKeyDown(e) {
@@ -291,6 +313,29 @@ export default function CourseSearch({
     return terms.find((t) => t.code === termCode)?.description || "Select a term";
   }, [terms, termCode]);
   const hasCourseSelection = Boolean(termCode && subject);
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (!includeFullClasses) n += 1;
+    if (onlyWaitlisted) n += 1;
+    if (creditHour) n += 1;
+    if (scheduleType !== "any") n += 1;
+    if (campus !== "any") n += 1;
+    if (deliveryMode !== "any") n += 1;
+    if (dayFilter !== "any") n += 1;
+    if (timeFilter !== "any") n += 1;
+    if (instructorFilter.trim()) n += 1;
+    return n;
+  }, [
+    includeFullClasses,
+    onlyWaitlisted,
+    creditHour,
+    scheduleType,
+    campus,
+    deliveryMode,
+    dayFilter,
+    timeFilter,
+    instructorFilter,
+  ]);
   const campusOptions = useMemo(() => {
     const set = new Set(
       (courses || []).map((c) => c.campusDescription).filter(Boolean)
@@ -429,81 +474,119 @@ export default function CourseSearch({
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="relative" ref={termMenuRef}>
-            <label className="text-xs text-bison-text-muted">Term</label>
-            <button
-              type="button"
-              onClick={() => setTermMenuOpen((v) => !v)}
-              className="w-full mt-1 border border-bison-border rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-bison-gold text-left flex items-center justify-between gap-2"
-            >
-              <span className="truncate">{selectedTermLabel}</span>
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 20 20"
-                fill="none"
-                className={`h-4 w-4 text-bison-text-muted/80 transition-transform ${
-                  termMenuOpen ? "rotate-180" : ""
-                }`}
-              >
-                <path
-                  d="M5 7.5L10 12.5L15 7.5"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-
-            {termMenuOpen ? (
-              <div className="absolute z-20 mt-1 w-full bg-white border border-bison-border rounded-lg shadow-lg">
-                <div
-                  className="max-h-64 overflow-y-auto py-1"
-                  onScroll={onTermListScroll}
-                >
-                  {terms.map((t) => (
-                    <button
-                      key={t.code}
-                      type="button"
-                      onClick={() => {
-                        setTermCode(t.code);
-                        setTermMenuOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-bison-gold/10 ${
-                        t.code === termCode ? "bg-bison-gold/20 text-bison-brown font-medium" : ""
-                      }`}
-                    >
-                      {t.description}
-                    </button>
-                  ))}
-                  {termsLoading ? (
-                    <div className="px-3 py-2 text-xs text-bison-text-muted">Loading more terms...</div>
-                  ) : null}
-                  {!termsHasMore ? (
-                    <div className="px-3 py-2 text-xs text-bison-text-muted/80">No more terms</div>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
+        {subjectsError ? (
+          <div className="mt-4">
+            <LoadErrorBanner
+              title="Could not load departments"
+              message={subjectsError}
+              onRetry={() => loadInitialSubjects(termCode)}
+            />
           </div>
+        ) : null}
 
-          <div className="md:col-span-2">
-            <label className="text-xs text-bison-text-muted">Subject</label>
-            {subjectsError ? (
-              <div className="mt-1 mb-2">
-                <LoadErrorBanner
-                  title="Could not load departments"
-                  message={subjectsError}
-                  onRetry={() => loadInitialSubjects(termCode)}
-                />
-              </div>
-            ) : null}
+        {/* Sticky controls: term / subject / search stay reachable while the
+            course list scrolls. On mobile they collapse behind a summary bar. */}
+        <div className="sticky top-0 z-30 -mx-4 mt-4 mb-4 border-b border-bison-border/70 bg-bison-cream/95 px-4 py-2 backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => setControlsOpen((v) => !v)}
+            className="md:hidden w-full flex items-center justify-between gap-2 rounded-lg border border-bison-border bg-white px-3 py-2 text-left text-sm shadow-sm"
+          >
+            <span className="truncate">
+              {hasCourseSelection
+                ? `${subject} · ${selectedTermLabel}`
+                : termCode
+                  ? `${selectedTermLabel} · choose a subject`
+                  : "Select a term & subject"}
+            </span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              fill="none"
+              className={`h-4 w-4 shrink-0 text-bison-text-muted/80 transition-transform ${
+                controlsOpen ? "rotate-180" : ""
+              }`}
+            >
+              <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          <div
+            className={`${
+              controlsOpen ? "grid" : "hidden"
+            } md:grid grid-cols-1 gap-3 md:grid-cols-[minmax(10rem,13rem)_1fr_1fr] md:items-end mt-2 md:mt-0`}
+          >
+            <div className="relative" ref={termMenuRef}>
+              <label className="text-xs text-bison-text-muted">Term</label>
+              <button
+                type="button"
+                onClick={() => setTermMenuOpen((v) => !v)}
+                className="w-full mt-1 border border-bison-border rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-bison-gold text-left flex items-center justify-between gap-2"
+              >
+                <span className="truncate">{selectedTermLabel}</span>
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  className={`h-4 w-4 text-bison-text-muted/80 transition-transform ${
+                    termMenuOpen ? "rotate-180" : ""
+                  }`}
+                >
+                  <path
+                    d="M5 7.5L10 12.5L15 7.5"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+
+              {termMenuOpen ? (
+                <div className="absolute z-20 mt-1 w-full bg-white border border-bison-border rounded-lg shadow-lg">
+                  <div
+                    className="max-h-64 overflow-y-auto py-1"
+                    onScroll={onTermListScroll}
+                  >
+                    {terms.map((t) => (
+                      <button
+                        key={t.code}
+                        type="button"
+                        onClick={() => {
+                          setTermCode(t.code);
+                          setTermMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-bison-gold/10 ${
+                          t.code === termCode ? "bg-bison-gold/20 text-bison-brown font-medium" : ""
+                        }`}
+                      >
+                        {t.description}
+                      </button>
+                    ))}
+                    {termsLoading ? (
+                      <div className="px-3 py-2 text-xs text-bison-text-muted">Loading more terms...</div>
+                    ) : null}
+                    {!termsHasMore ? (
+                      <div className="px-3 py-2 text-xs text-bison-text-muted/80">No more terms</div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
             <div className="relative" ref={subjectMenuRef}>
+              <label className="text-xs text-bison-text-muted">Subject</label>
               <input
                 value={subjectInput}
                 onChange={onSubjectInputChange}
-                onFocus={() => setSubjectMenuOpen(true)}
+                onFocus={(e) => {
+                  setSubjectMenuOpen(true);
+                  // Select the existing text so the user can retype right away.
+                  // Defer past the click's mouseup, which would otherwise
+                  // collapse the selection to a caret.
+                  const el = e.currentTarget;
+                  requestAnimationFrame(() => el.select());
+                }}
                 onKeyDown={onSubjectInputKeyDown}
                 placeholder="Type subject code or name..."
                 className="w-full mt-1 border border-bison-border rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-bison-gold"
@@ -541,34 +624,65 @@ export default function CourseSearch({
                 </div>
               ) : null}
             </div>
+
+            <div>
+              <label className="text-xs text-bison-text-muted">Find a course</label>
+              <div className="mt-1">
+                <SearchBar value={query} onChange={setQuery} />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="mt-5 space-y-3">
-          <SearchBar value={query} onChange={setQuery} />
-          <FilterPanel
-            includeFullClasses={includeFullClasses}
-            setIncludeFullClasses={setIncludeFullClasses}
-            onlyWaitlisted={onlyWaitlisted}
-            setOnlyWaitlisted={setOnlyWaitlisted}
-            creditHour={creditHour}
-            setCreditHour={setCreditHour}
-            scheduleType={scheduleType}
-            setScheduleType={setScheduleType}
-            campus={campus}
-            setCampus={setCampus}
-            campusOptions={campusOptions}
-            deliveryMode={deliveryMode}
-            setDeliveryMode={setDeliveryMode}
-            deliveryOptions={deliveryOptions}
-            dayFilter={dayFilter}
-            setDayFilter={setDayFilter}
-            timeFilter={timeFilter}
-            setTimeFilter={setTimeFilter}
-            instructorFilter={instructorFilter}
-            setInstructorFilter={setInstructorFilter}
-            onClearFilters={clearFilters}
-          />
+        {/* Filters — collapsible on mobile, always shown on desktop */}
+        <div className="mb-2">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            className="md:hidden w-full flex items-center justify-between gap-2 rounded-lg border border-bison-border bg-white px-3 py-2 text-sm font-semibold text-bison-brown shadow-sm"
+          >
+            <span>
+              Filters
+              {activeFilterCount ? (
+                <span className="ml-1 font-normal text-bison-text-muted">· {activeFilterCount} active</span>
+              ) : null}
+            </span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              fill="none"
+              className={`h-4 w-4 shrink-0 text-bison-text-muted/80 transition-transform ${
+                filtersOpen ? "rotate-180" : ""
+              }`}
+            >
+              <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <div className={`${filtersOpen ? "block" : "hidden"} md:block mt-2 md:mt-0`}>
+            <FilterPanel
+              includeFullClasses={includeFullClasses}
+              setIncludeFullClasses={setIncludeFullClasses}
+              onlyWaitlisted={onlyWaitlisted}
+              setOnlyWaitlisted={setOnlyWaitlisted}
+              creditHour={creditHour}
+              setCreditHour={setCreditHour}
+              scheduleType={scheduleType}
+              setScheduleType={setScheduleType}
+              campus={campus}
+              setCampus={setCampus}
+              campusOptions={campusOptions}
+              deliveryMode={deliveryMode}
+              setDeliveryMode={setDeliveryMode}
+              deliveryOptions={deliveryOptions}
+              dayFilter={dayFilter}
+              setDayFilter={setDayFilter}
+              timeFilter={timeFilter}
+              setTimeFilter={setTimeFilter}
+              instructorFilter={instructorFilter}
+              setInstructorFilter={setInstructorFilter}
+              onClearFilters={clearFilters}
+            />
+          </div>
         </div>
               
         <div className="mt-6">
