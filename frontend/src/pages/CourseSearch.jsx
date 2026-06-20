@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCourseCode, getInstructorName } from "../utils/course.js";
-import { hasDay, inTimeWindow } from "../utils/courseFilters.js";
+import { hasDay, inTimeWindow, matchesLevels } from "../utils/courseFilters.js";
 import { getSubjects, getTerms } from "../api/client.js";
 import useCourses from "../hooks/useCourses.js";
 import FilterPanel from "../components/FilterPanel.jsx";
@@ -50,6 +50,7 @@ export default function CourseSearch({
   const [query, setQuery] = useState("");
   const [includeFullClasses, setIncludeFullClasses] = useState(true);
   const [onlyWaitlisted, setOnlyWaitlisted] = useState(false);
+  const [levels, setLevels] = useState([]);
   const [creditHour, setCreditHour] = useState("");
   const [scheduleType, setScheduleType] = useState("any");
   const [campus, setCampus] = useState("any");
@@ -141,6 +142,7 @@ export default function CourseSearch({
     setQuery("");
     setIncludeFullClasses(true);
     setOnlyWaitlisted(false);
+    setLevels([]);
     setCreditHour("");
     setScheduleType("any");
     setCampus("any");
@@ -317,6 +319,7 @@ export default function CourseSearch({
     let n = 0;
     if (!includeFullClasses) n += 1;
     if (onlyWaitlisted) n += 1;
+    if (levels.length) n += 1;
     if (creditHour) n += 1;
     if (scheduleType !== "any") n += 1;
     if (campus !== "any") n += 1;
@@ -328,6 +331,7 @@ export default function CourseSearch({
   }, [
     includeFullClasses,
     onlyWaitlisted,
+    levels,
     creditHour,
     scheduleType,
     campus,
@@ -372,6 +376,7 @@ export default function CourseSearch({
           const wait = Number(c.waitCount ?? c.waitlistCount ?? 0);
           if (wait <= 0) return false;
         }
+        if (!matchesLevels(c, levels)) return false;
         if (creditNum != null) {
           const credits = Number(c.credits ?? c.creditHours ?? 0);
           if (credits !== creditNum) return false;
@@ -411,6 +416,7 @@ export default function CourseSearch({
     query,
     includeFullClasses,
     onlyWaitlisted,
+    levels,
     creditHour,
     scheduleType,
     campus,
@@ -423,6 +429,7 @@ export default function CourseSearch({
   function clearFilters() {
     setIncludeFullClasses(true);
     setOnlyWaitlisted(false);
+    setLevels([]);
     setCreditHour("");
     setScheduleType("any");
     setCampus("any");
@@ -664,6 +671,8 @@ export default function CourseSearch({
               setIncludeFullClasses={setIncludeFullClasses}
               onlyWaitlisted={onlyWaitlisted}
               setOnlyWaitlisted={setOnlyWaitlisted}
+              levels={levels}
+              setLevels={setLevels}
               creditHour={creditHour}
               setCreditHour={setCreditHour}
               scheduleType={scheduleType}

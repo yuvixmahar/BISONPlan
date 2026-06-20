@@ -1,8 +1,12 @@
+import { COURSE_LEVELS } from "../utils/courseFilters.js";
+
 export default function FilterPanel({
   includeFullClasses,
   setIncludeFullClasses,
   onlyWaitlisted,
   setOnlyWaitlisted,
+  levels,
+  setLevels,
   creditHour,
   setCreditHour,
   scheduleType,
@@ -21,6 +25,14 @@ export default function FilterPanel({
   setInstructorFilter,
   onClearFilters,
 }) {
+  function toggleLevel(level) {
+    setLevels((prev) =>
+      prev.includes(level)
+        ? prev.filter((l) => l !== level)
+        : [...prev, level].sort((a, b) => a - b)
+    );
+  }
+
   return (
     <div className="bg-white border border-bison-border rounded-xl p-4 shadow-sm">
       <div className="flex items-center justify-between mb-4">
@@ -52,6 +64,30 @@ export default function FilterPanel({
           />
           Only classes with waitlist
         </label>
+      </div>
+
+      <div className="mb-4">
+        <div className="flex items-baseline justify-between mb-1.5">
+          <label className="block text-xs text-bison-text-muted">Course level</label>
+          <span className="text-[11px] text-bison-text-muted/80">
+            1xxx–4xxx undergrad · 7xxx grad
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          {COURSE_LEVELS.map((level) => (
+            <label
+              key={level}
+              className="flex items-center gap-2 text-sm text-bison-text"
+            >
+              <input
+                type="checkbox"
+                checked={levels.includes(level)}
+                onChange={() => toggleLevel(level)}
+              />
+              {level}xxx
+            </label>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">

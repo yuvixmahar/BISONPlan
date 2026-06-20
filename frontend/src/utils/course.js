@@ -63,6 +63,10 @@ export function getCourseSection(course) {
   return pickFirst(course, SECTION_KEYS, "");
 }
 
+export function getCourseNumber(course) {
+  return pickFirst(course, NUMBER_KEYS, "");
+}
+
 export function getCourseCode(course, { fallback = "Course" } = {}) {
   const subject = pickFirst(course, SUBJECT_KEYS);
   const number = pickFirst(course, NUMBER_KEYS);
