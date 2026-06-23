@@ -10,7 +10,7 @@ Built for students who want to explore courses, compare sections, and sketch out
 
 - **Live Aurora data** — terms, departments, sections, and seats are fetched in real time from U of M registration.
 - **Term and subject pickers** — paginated dropdowns with search, matching Aurora’s lookup behavior.
-- **Rich filtering** — narrow by credits, campus, delivery mode, schedule type, day of week, time of day, and instructor; toggle full classes and waitlist-only sections.
+- **Rich filtering** — narrow by credits, course level (1xxx–4xxx undergrad / 7xxx grad), campus, delivery mode, schedule type, day of week, time of day, and instructor; toggle full classes and waitlist-only sections.
 - **Text search** — filter the loaded section list by course code or title (use the instructor filter for professor names).
 - **Seat badges** — open, waitlist, and full status at a glance.
 - **Quick View drawer** — meeting times, locations, instructors, dates, and section notes without leaving the list.
