@@ -178,6 +178,11 @@ describe("normalizePlannerEvents", () => {
     const events = normalizePlannerEvents([makeCourse()]);
     expect(events[0].location).toBe("EITC E2 110");
   });
+
+  it("carries the CRN through from the course", () => {
+    const events = normalizePlannerEvents([makeCourse({ courseReferenceNumber: "23401" })]);
+    expect(events[0].crn).toBe("23401");
+  });
 });
 
 // ── buildEventTooltip ────────────────────────────────────────────────────────
@@ -203,6 +208,10 @@ describe("buildEventTooltip", () => {
 
   it("includes location", () => {
     expect(buildEventTooltip(baseEv)).toContain("EITC E2 110");
+  });
+
+  it("includes the CRN when present", () => {
+    expect(buildEventTooltip({ ...baseEv, crn: "23401" })).toContain("CRN 23401");
   });
 
   it("omits falsy fields", () => {

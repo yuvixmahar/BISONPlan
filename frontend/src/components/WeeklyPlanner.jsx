@@ -249,6 +249,7 @@ function EventPopover({ ev, anchorRect }) {
         {ev.code}{ev.section ? ` ${ev.section}` : ""}
       </div>
       <div className="text-[10px] leading-snug space-y-0.5">
+        {ev.crn ? <div className="font-medium">CRN {ev.crn}</div> : null}
         <div>{timeLine}</div>
         {type ? <div>{type}</div> : null}
         <div>{ev.location || "TBA"}</div>
@@ -300,6 +301,9 @@ function PlannerEventBlock({ ev, variant, style, title, mode = "desktop", calend
       >
         <div className="font-semibold leading-[1.25] text-[9.5px] break-words">{codeLine}</div>
         <div className="leading-[1.25] text-[9px] break-words text-bison-brown/80">{timeLine}</div>
+        {ev.crn ? (
+          <div className="leading-[1.2] text-[8.5px] break-words text-bison-brown/70">CRN {ev.crn}</div>
+        ) : null}
         <div className="leading-[1.2] text-[8.5px] break-words text-bison-brown/70">{locationLine}</div>
       </div>
     );
@@ -321,6 +325,9 @@ function PlannerEventBlock({ ev, variant, style, title, mode = "desktop", calend
       <div className="shrink-0 font-semibold whitespace-nowrap">{codeLine}</div>
       <div className="shrink-0 whitespace-nowrap">{ev.sectionType}</div>
       <div className="shrink-0 whitespace-nowrap text-bison-brown/90">{timeLine}</div>
+      {ev.crn ? (
+        <div className="shrink-0 whitespace-nowrap text-bison-brown/70">CRN {ev.crn}</div>
+      ) : null}
       {variant === "comfortable" ? (
         <div className="shrink-0 whitespace-nowrap text-bison-brown/80">{ev.instructor || ""}</div>
       ) : null}

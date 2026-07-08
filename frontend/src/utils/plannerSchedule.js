@@ -1,5 +1,6 @@
 import {
   getCourseCode,
+  getCourseCrn,
   getCourseSection,
   getCourseTitle,
   getInstructorName,
@@ -112,6 +113,7 @@ export function normalizePlannerEvents(courses) {
     const plannerId = course?._plannerId || "";
     const code = getCourseCode(course);
     const section = getCourseSection(course);
+    const crn = getCourseCrn(course);
     const instructor = getInstructorName(course);
     const title = getCourseTitle(course);
     const { start: rangeStart, end: rangeEnd } = getCourseDateRange(course);
@@ -138,6 +140,7 @@ export function normalizePlannerEvents(courses) {
           end,
           code,
           section,
+          crn,
           instructor,
           title,
           sectionType,
@@ -155,6 +158,7 @@ export function normalizePlannerEvents(courses) {
 export function buildEventTooltip(ev) {
   return [
     `${ev.code}${ev.section ? ` ${ev.section}` : ""}`,
+    ev.crn ? `CRN ${ev.crn}` : "",
     formatTimeRangeFromMinutes(ev.start, ev.end),
     ev.sectionType,
     ev.location,
