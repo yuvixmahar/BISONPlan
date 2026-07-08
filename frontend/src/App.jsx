@@ -91,6 +91,19 @@ export default function App() {
     setPlannerNotice(null);
   }
 
+  // Replace a planned course with fresh backend data (accepting a change Aurora
+  // made), keeping its planner identity and stamped term code.
+  function updatePlannerCourse(termKey, plannerCourseId, freshCourse) {
+    setPlannerByTerm((prev) => ({
+      ...prev,
+      [termKey]: (prev[termKey] || []).map((item) =>
+        item?._plannerId === plannerCourseId
+          ? { ...freshCourse, _plannerId: plannerCourseId, _plannerTermCode: item._plannerTermCode }
+          : item
+      ),
+    }));
+  }
+
   if (!disclaimerAccepted) {
     return (
       <>
@@ -149,6 +162,7 @@ export default function App() {
               setActivePlannerTerm={setActivePlannerTerm}
               plannerByTerm={plannerByTerm}
               onRemoveCourse={removeCourseFromPlanner}
+              onUpdateCourse={updatePlannerCourse}
             />
           </div>
         </div>

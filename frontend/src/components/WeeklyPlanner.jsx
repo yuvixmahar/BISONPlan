@@ -26,6 +26,9 @@ import {
   layoutDayEvents,
   normalizePlannerEvents,
 } from "../utils/plannerSchedule.js";
+import { buildPlannerText, downloadTextFile, plannerTextFilename } from "../utils/plannerExport.js";
+import usePlannerFreshness from "../hooks/usePlannerFreshness.js";
+import PlannerFreshnessNotice from "./PlannerFreshnessNotice.jsx";
 import { formatMinutesAmPm, formatTimeRangeCompact } from "../utils/time.js";
 
 // Day abbreviations for the compact mobile header
@@ -598,8 +601,12 @@ export default function WeeklyPlanner({
   setActivePlannerTerm,
   plannerByTerm,
   onRemoveCourse,
+  onUpdateCourse,
 }) {
   const plannedCourses = plannerByTerm[activePlannerTerm] || [];
+  const { issues, showNotice, dismiss, remind, resolve, verifyTermIssues } =
+    usePlannerFreshness(plannerByTerm);
+  const [downloadBlocked, setDownloadBlocked] = useState(false);
   const events = useMemo(() => normalizePlannerEvents(plannedCourses), [plannedCourses]);
   const bounds = useMemo(
     () => getPlannerBounds(plannedCourses, activePlannerTerm),
@@ -617,10 +624,32 @@ export default function WeeklyPlanner({
     setWeekIndex(findInitialWeekIndex(weekStarts));
   }, [activePlannerTerm, weekStarts]);
 
+  useEffect(() => {
+    setDownloadBlocked(false);
+  }, [activePlannerTerm]);
+
   const safeWeekIndex = Math.min(Math.max(weekIndex, 0), Math.max(weekStarts.length - 1, 0));
   const currentWeekStart = weekStarts[safeWeekIndex] || getWeekStartMonday(bounds.start);
   const activeTermLabel =
     PLANNER_TERMS.find((term) => term.key === activePlannerTerm)?.label || activePlannerTerm;
+
+  function doDownload() {
+    const text = buildPlannerText(activeTermLabel, plannedCourses);
+    downloadTextFile(plannerTextFilename(activeTermLabel), text);
+  }
+
+  // Re-verify this term against the backend before downloading. If anything
+  // changed, surface the notice and require an explicit "Download anyway".
+  async function handleDownloadSchedule() {
+    setDownloadBlocked(false);
+    const termIssues = await verifyTermIssues(activePlannerTerm);
+    if (termIssues.length > 0) {
+      remind();
+      setDownloadBlocked(true);
+      return;
+    }
+    doDownload();
+  }
 
   return (
     <section>
@@ -632,29 +661,75 @@ export default function WeeklyPlanner({
             use the same calendar view.
           </p>
         </div>
-        <div
-          className="inline-flex rounded-lg border border-bison-border bg-white p-1"
-          role="tablist"
-          aria-label="Planner term"
-        >
-          {PLANNER_TERMS.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={activePlannerTerm === key}
-              onClick={() => setActivePlannerTerm(key)}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                activePlannerTerm === key
-                  ? "bg-bison-gold text-bison-brown font-semibold"
-                  : "text-bison-text hover:bg-bison-gold/15"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
+          <div
+            className="inline-flex rounded-lg border border-bison-border bg-white p-1"
+            role="tablist"
+            aria-label="Planner term"
+          >
+            {PLANNER_TERMS.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={activePlannerTerm === key}
+                onClick={() => setActivePlannerTerm(key)}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  activePlannerTerm === key
+                    ? "bg-bison-gold text-bison-brown font-semibold"
+                    : "text-bison-text hover:bg-bison-gold/15"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {plannedCourses.length > 0 ? (
+            <div className="flex flex-col items-stretch gap-1 sm:items-end">
+              <button
+                type="button"
+                onClick={handleDownloadSchedule}
+                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-bison-border bg-white px-3 py-1.5 text-sm text-bison-text hover:bg-bison-gold/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bison-gold focus-visible:ring-offset-2"
+              >
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+                  <path
+                    d="M10 3v9m0 0L6.5 8.5M10 12l3.5-3.5M4.5 15.5h11"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Download {activeTermLabel} (.txt)
+              </button>
+              {downloadBlocked ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDownloadBlocked(false);
+                    doDownload();
+                  }}
+                  className="inline-flex items-center justify-center rounded-md border border-bison-gold bg-bison-gold/15 px-3 py-1 text-xs font-medium text-bison-brown hover:bg-bison-gold/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bison-gold"
+                >
+                  Some courses changed — download anyway
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
+
+      {showNotice ? (
+        <div className="mt-4">
+          <PlannerFreshnessNotice
+            issues={issues}
+            onUpdate={onUpdateCourse}
+            onRemove={onRemoveCourse}
+            onResolve={resolve}
+            onDismiss={dismiss}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-4 rounded-xl border border-bison-border bg-white pl-1 pt-3 pr-1 pb-3 sm:p-3 md:p-4">
         {plannedCourses.length === 0 ? (

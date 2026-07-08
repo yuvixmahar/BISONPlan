@@ -446,7 +446,9 @@ export default function CourseSearch({
 
   function addCourseToPlanner(course) {
     const targetTerm = plannerTermFromSelection();
-    onAddToPlanner?.(course, targetTerm);
+    // Stamp the Aurora term code so the planner can later re-verify this course
+    // (subject + term + CRN) against the backend during registration.
+    onAddToPlanner?.({ ...course, _plannerTermCode: termCode }, targetTerm);
   }
 
   return (
