@@ -1,13 +1,24 @@
-import { getCourseCode, getCourseCrn, getCourseTitle } from "./course.js";
+import { getCourseCode, getCourseCrn, getCourseSection, getCourseTitle } from "./course.js";
 
 // Windows line endings so the .txt opens cleanly in Notepad as well as phones.
 const EOL = "\r\n";
 
-function todayIso(now = new Date()) {
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function localDate(now) {
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+}
+
+// 24-hour local time. Colon form for the file body, compact form for filenames
+// (colons aren't allowed in Windows filenames).
+function localTime(now) {
+  return `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+}
+
+function localTimeCompact(now) {
+  return `${pad2(now.getHours())}${pad2(now.getMinutes())}`;
 }
 
 /**
@@ -21,7 +32,7 @@ export function buildPlannerText(termLabel, courses = [], { now = new Date() } =
   const lines = [];
 
   lines.push(`BISONplan — ${label} schedule`);
-  lines.push(`Generated ${todayIso(now)}`);
+  lines.push(`Generated ${localDate(now)} ${localTime(now)}`);
   lines.push("");
 
   if (list.length === 0) {
@@ -39,9 +50,11 @@ export function buildPlannerText(termLabel, courses = [], { now = new Date() } =
   lines.push(`Courses (${list.length})`);
   for (const course of list) {
     const code = getCourseCode(course, { fallback: "Course" });
+    const section = getCourseSection(course);
+    const codeWithSection = section ? `${code} ${section}` : code;
     const title = getCourseTitle(course);
     const crn = getCourseCrn(course);
-    lines.push(`- ${code} - ${title}${crn ? ` - CRN ${crn}` : " - CRN not available"}`);
+    lines.push(`- ${codeWithSection} - ${title}${crn ? ` - CRN ${crn}` : " - CRN not available"}`);
   }
 
   lines.push("");
@@ -50,14 +63,14 @@ export function buildPlannerText(termLabel, courses = [], { now = new Date() } =
   return lines.join(EOL) + EOL;
 }
 
-/** e.g. "bisonplan-fall-schedule-2026-07-08.txt" */
+/** e.g. "bisonplan-fall-schedule-2026-07-08-1435.txt" */
 export function plannerTextFilename(termLabel, { now = new Date() } = {}) {
   const slug = String(termLabel || "planner")
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return `bisonplan-${slug || "planner"}-schedule-${todayIso(now)}.txt`;
+  return `bisonplan-${slug || "planner"}-schedule-${localDate(now)}-${localTimeCompact(now)}.txt`;
 }
 
 /** Triggers a client-side download of `text` as `filename`. No-op without a DOM. */

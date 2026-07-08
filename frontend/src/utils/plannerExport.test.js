@@ -1,25 +1,32 @@
 import { describe, expect, it } from "vitest";
 import { buildPlannerText, plannerTextFilename } from "./plannerExport.js";
 
-const NOW = new Date(2026, 6, 8); // 2026-07-08 (local)
+const NOW = new Date(2026, 6, 8, 14, 35); // 2026-07-08 14:35 (local)
 
-const course = (subjectCode, courseNumber, title, crn) => ({
+const course = (subjectCode, courseNumber, title, crn, section) => ({
   subjectCode,
   courseNumber,
   title,
   courseReferenceNumber: crn,
+  ...(section ? { sequenceNumber: section } : {}),
 });
 
 const sample = [
-  course("COMP", "1010", "Introduction to Computer Science 1", "12345"),
-  course("MATH", "1500", "Introduction to Calculus", "23456"),
+  course("COMP", "1010", "Introduction to Computer Science 1", "12345", "A01"),
+  course("MATH", "1500", "Introduction to Calculus", "23456", "B02"),
 ];
 
 describe("buildPlannerText", () => {
-  it("lists each course as 'CODE - Title - CRN'", () => {
+  it("lists each course as 'CODE SECTION - Title - CRN'", () => {
     const text = buildPlannerText("Fall", sample, { now: NOW });
-    expect(text).toContain("- COMP 1010 - Introduction to Computer Science 1 - CRN 12345");
-    expect(text).toContain("- MATH 1500 - Introduction to Calculus - CRN 23456");
+    expect(text).toContain("- COMP 1010 A01 - Introduction to Computer Science 1 - CRN 12345");
+    expect(text).toContain("- MATH 1500 B02 - Introduction to Calculus - CRN 23456");
+  });
+
+  it("omits the section when a course has none", () => {
+    const noSection = [course("STAT", "1000", "Basic Statistics", "34567")];
+    const text = buildPlannerText("Fall", noSection, { now: NOW });
+    expect(text).toContain("- STAT 1000 - Basic Statistics - CRN 34567");
   });
 
   it("includes a quick-copy CRNs line with every CRN", () => {
@@ -27,10 +34,10 @@ describe("buildPlannerText", () => {
     expect(text).toContain("CRNs: 12345  23456");
   });
 
-  it("has a term-labelled header and generated date", () => {
+  it("has a term-labelled header and a generated date + time", () => {
     const text = buildPlannerText("Winter", sample, { now: NOW });
     expect(text).toContain("BISONplan — Winter schedule");
-    expect(text).toContain("Generated 2026-07-08");
+    expect(text).toContain("Generated 2026-07-08 14:35");
     expect(text).toContain("Courses (2)");
   });
 
@@ -55,15 +62,15 @@ describe("buildPlannerText", () => {
 });
 
 describe("plannerTextFilename", () => {
-  it("builds a slugged, dated filename", () => {
+  it("builds a slugged filename with date and time", () => {
     expect(plannerTextFilename("Fall", { now: NOW })).toBe(
-      "bisonplan-fall-schedule-2026-07-08.txt"
+      "bisonplan-fall-schedule-2026-07-08-1435.txt"
     );
   });
 
   it("falls back when the label is empty", () => {
     expect(plannerTextFilename("", { now: NOW })).toBe(
-      "bisonplan-planner-schedule-2026-07-08.txt"
+      "bisonplan-planner-schedule-2026-07-08-1435.txt"
     );
   });
 });
