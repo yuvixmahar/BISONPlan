@@ -4,6 +4,7 @@ import {
   formatLegacyMeetingLine,
   formatMeetingDayLabels,
   getCourseCode,
+  getCourseCrn,
   getCourseSection,
   getCourseTitle,
   getInstructorName,
@@ -17,6 +18,7 @@ export default function CourseCard({ course, onQuickView, onAddToPlanner }) {
   const code = useMemo(() => getCourseCode(course, { fallback: "" }), [course]);
   const title = useMemo(() => getCourseTitle(course), [course]);
   const section = useMemo(() => getCourseSection(course), [course]);
+  const crn = useMemo(() => getCourseCrn(course), [course]);
   const instructor = useMemo(() => getInstructorName(course), [course]);
   const credits = useMemo(
     () => pickFirst(course, ["credits", "creditHours", "creditHoursText", "credit"], ""),
@@ -57,10 +59,16 @@ export default function CourseCard({ course, onQuickView, onAddToPlanner }) {
             <div className="font-heading font-semibold text-bison-text leading-tight">{code || "Course"}</div>
             <div className="text-sm text-bison-text-muted mt-0.5 truncate">{title}</div>
             <div className="text-xs text-bison-text-muted mt-1 flex flex-wrap items-center gap-x-1.5">
-              <span>{section ? `Section ${section}` : "Section —"}</span>
+              {crn && (
+                <>
+                  <span className="font-medium text-bison-text whitespace-nowrap">CRN {crn}</span>
+                  <span aria-hidden="true" className="text-bison-border">·</span>
+                </>
+              )}
+              <span className="whitespace-nowrap">{section ? `Section ${section}` : "Section —"}</span>
               <span aria-hidden="true" className="text-bison-border">·</span>
-              <span>{instructor || "Instructor TBA"}</span>
-              {credits && <><span aria-hidden="true" className="text-bison-border">·</span><span>{credits} credits</span></>}
+              <span className="min-w-0 break-words">{instructor || "Instructor TBA"}</span>
+              {credits && <><span aria-hidden="true" className="text-bison-border">·</span><span className="whitespace-nowrap">{credits} credits</span></>}
             </div>
             {meetingChips.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
@@ -116,11 +124,13 @@ export default function CourseCard({ course, onQuickView, onAddToPlanner }) {
             />
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-bison-text-muted">
-            {section && <span>Section {section}</span>}
+            {crn && <span className="font-medium text-bison-text whitespace-nowrap">CRN {crn}</span>}
+            {crn && (section || instructor || credits) && <span aria-hidden="true" className="text-bison-border">·</span>}
+            {section && <span className="whitespace-nowrap">Section {section}</span>}
             {section && instructor && <span aria-hidden="true" className="text-bison-border">·</span>}
-            {instructor && <span className="break-words">{instructor}</span>}
+            {instructor && <span className="min-w-0 break-words">{instructor}</span>}
             {credits && (instructor || section) && <span aria-hidden="true" className="text-bison-border">·</span>}
-            {credits && <span>{credits} cr</span>}
+            {credits && <span className="whitespace-nowrap">{credits} cr</span>}
           </div>
           {meetingChips.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-1">

@@ -33,6 +33,7 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
   const code = useMemo(() => getCourseCode(activeCourse, { fallback: "" }), [activeCourse]);
   const title = useMemo(() => getCourseTitle(activeCourse), [activeCourse]);
   const section = useMemo(() => getCourseSection(activeCourse), [activeCourse]);
+  const crn = useMemo(() => getCourseCrn(activeCourse), [activeCourse]);
   const instructor = useMemo(() => getInstructorName(activeCourse), [activeCourse]);
   const meetings = useMemo(() => getMeetingsWithFaculty(activeCourse), [activeCourse]);
   const prereqSplit = useMemo(
@@ -198,8 +199,18 @@ export default function QuickViewDrawer({ open, course, termCode, onClose }) {
             <p id={subtitleId} className="text-sm text-bison-text-muted">
               {title}
             </p>
-            {section ? (
-              <p className="mt-1 text-xs text-bison-text-muted">Section {section}</p>
+            {section || crn ? (
+              <p className="mt-1 text-xs text-bison-text-muted">
+                {section ? `Section ${section}` : null}
+                {section && crn ? (
+                  <span aria-hidden="true" className="text-bison-border">
+                    {" · "}
+                  </span>
+                ) : null}
+                {crn ? (
+                  <span className="font-medium text-bison-text">CRN {crn}</span>
+                ) : null}
+              </p>
             ) : null}
           </div>
           <button
