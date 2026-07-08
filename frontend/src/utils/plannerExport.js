@@ -42,7 +42,9 @@ export function buildPlannerText(termLabel, courses = [], { now = new Date() } =
 
   const crns = list.map((course) => getCourseCrn(course)).filter(Boolean);
   if (crns.length) {
-    lines.push("Register fast: paste these into Aurora → Registration → Enter CRNs");
+    lines.push(
+      "Register fast: write these into Aurora → Registration → Register for classes → Select a term → Enter CRNs"
+    );
     lines.push(`CRNs: ${crns.join("  ")}`);
     lines.push("");
   }
