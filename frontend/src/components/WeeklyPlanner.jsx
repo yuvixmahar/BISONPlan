@@ -323,7 +323,6 @@ function PlannerEventBlock({ ev, variant, style, title, mode = "desktop", calend
       title={title}
     >
       <div className="shrink-0 font-semibold whitespace-nowrap">{codeLine}</div>
-      <div className="shrink-0 whitespace-nowrap">{ev.sectionType}</div>
       <div className="shrink-0 whitespace-nowrap text-bison-brown/90">{timeLine}</div>
       {ev.crn ? (
         <div className="shrink-0 whitespace-nowrap text-bison-brown/70">CRN {ev.crn}</div>
