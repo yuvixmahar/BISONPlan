@@ -3,7 +3,6 @@ from fastapi import APIRouter, Path, Query, Request
 from ..config import cache_ttl_seconds
 from ..limiter import limiter
 from ..services.aurora import (
-    AuroraBudgetBlocked,
     fetch_description,
     init_term_session,
     make_client,
@@ -12,7 +11,7 @@ from ..services.cached_aurora import cached_aurora_fetch
 from ..services.description import build_course_detail
 from ..services.scraper import scrape_subject_cached, scrape_subject_page_cached
 from ..utils.api_response import api_response
-from ..utils.errors import AURORA_ERRORS, aurora_budget_error, aurora_unavailable_error
+from ..utils.errors import aurora_error_handling
 from ..utils.validation import CRN_PATTERN, SUBJECT_CODE_PATTERN, TERM_CODE_PATTERN
 
 router = APIRouter()
@@ -28,7 +27,7 @@ async def get_courses(
     offset: int = Query(0, ge=0),
     limit: int | None = Query(None, ge=1, le=500),
 ):
-    try:
+    with aurora_error_handling("scraping"):
         # Paginated basic fetch: one page at a time so the course-search page can
         # paint the first courses fast, then load the rest in the background.
         if limit is not None and not includeDescriptions:
@@ -61,10 +60,6 @@ async def get_courses(
             budget_message=result["budget_message"],
             cache_ttl_seconds=cache_ttl_seconds(),
         )
-    except AuroraBudgetBlocked as e:
-        raise aurora_budget_error(e)
-    except AURORA_ERRORS as e:
-        raise aurora_unavailable_error("scraping", e)
 
 
 @router.get("/courses/{crn}/description")
@@ -82,7 +77,7 @@ async def get_course_description(
             desc = await fetch_description(client, crn, term)
         return build_course_detail(desc)
 
-    try:
+    with aurora_error_handling("fetching description"):
         result = await cached_aurora_fetch(cache_key, fetcher)
         return api_response(
             True,
@@ -91,7 +86,3 @@ async def get_course_description(
             result["data"],
             budget_message=result["budget_message"],
         )
-    except AuroraBudgetBlocked as e:
-        raise aurora_budget_error(e)
-    except AURORA_ERRORS as e:
-        raise aurora_unavailable_error("fetching description", e)

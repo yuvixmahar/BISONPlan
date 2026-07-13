@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Query, Request
 
 from ..limiter import limiter
-from ..services.aurora import AuroraBudgetBlocked, fetch_subjects, init_term_session, make_client
+from ..services.aurora import fetch_subjects, init_term_session, make_client
 from ..services.cached_aurora import cached_aurora_fetch
 from ..utils.api_response import api_response
 from ..utils.aurora_data import normalize_subject_items
-from ..utils.errors import AURORA_ERRORS, aurora_budget_error, aurora_unavailable_error
+from ..utils.errors import aurora_error_handling
 from ..utils.pagination import paginated_page
 from ..utils.validation import SESSION_ID_MAX_LENGTH, TERM_CODE_PATTERN
 
@@ -37,7 +37,7 @@ async def get_subjects(
                 unique_session_id=uniqueSessionId,
             )
 
-    try:
+    with aurora_error_handling("fetching subjects"):
         result = await cached_aurora_fetch(cache_key, fetcher)
         data = {
             **paginated_page(normalize_subject_items(result["data"]), offset, max),
@@ -50,7 +50,3 @@ async def get_subjects(
             data,
             budget_message=result["budget_message"],
         )
-    except AuroraBudgetBlocked as e:
-        raise aurora_budget_error(e)
-    except AURORA_ERRORS as e:
-        raise aurora_unavailable_error("fetching subjects", e)
