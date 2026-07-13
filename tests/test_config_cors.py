@@ -1,7 +1,7 @@
 
 import pytest
 
-from backend.config import cors_origins
+from backend.core.config import cors_origins
 
 
 def test_cors_origins_default_local_dev(monkeypatch):

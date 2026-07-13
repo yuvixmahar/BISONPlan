@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Path, Query, Request
 
-from ..config import cache_ttl_seconds
-from ..limiter import limiter
+from ..core.config import cache_ttl_seconds
+from ..core.limiter import limiter
 from ..services.aurora import (
     fetch_description,
     init_term_session,

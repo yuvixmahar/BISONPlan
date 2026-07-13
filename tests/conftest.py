@@ -8,7 +8,7 @@ from backend.main import app
 def reset_runtime_state():
     # Reset shared in-memory state between tests so behaviour is controlled
     # entirely through Aurora mocks.
-    from backend.cache import cache
+    from backend.core.cache import cache
     from backend.services import aurora_budget as module
 
     cache._data.clear()

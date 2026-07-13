@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, Request
 
-from ..limiter import limiter
+from ..core.limiter import limiter
 from ..services.aurora import fetch_subjects, init_term_session, make_client
 from ..services.cached_aurora import cached_aurora_fetch
 from ..utils.api_response import ApiResponse

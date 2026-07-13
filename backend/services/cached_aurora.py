@@ -2,7 +2,7 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from ..cache import cache
+from ..core.cache import cache
 from ..utils.errors import AURORA_ERRORS
 
 

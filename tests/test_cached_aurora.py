@@ -1,7 +1,7 @@
 import httpx
 import pytest
 
-from backend.cache import cache
+from backend.core.cache import cache
 from backend.services.cached_aurora import cached_aurora_fetch
 
 

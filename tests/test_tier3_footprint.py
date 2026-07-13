@@ -41,7 +41,7 @@ async def test_invalid_subject_code_returns_422():
 
 @pytest.mark.asyncio
 async def test_aurora_user_agent_contains_contact_email():
-    from backend.config import aurora_headers
+    from backend.core.config import aurora_headers
 
     headers = aurora_headers()
     assert "singhy5@myumanitoba.ca" in headers["User-Agent"]

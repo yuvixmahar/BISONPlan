@@ -12,7 +12,7 @@ def test_quiet_hours_use_longer_cache_ttl(monkeypatch):
     from datetime import datetime
 
     monkeypatch.setattr(
-        "backend.config.datetime",
+        "backend.core.config.datetime",
         type(
             "DT",
             (),
@@ -23,7 +23,7 @@ def test_quiet_hours_use_longer_cache_ttl(monkeypatch):
             },
         ),
     )
-    from backend.config import cache_ttl_seconds
+    from backend.core.config import cache_ttl_seconds
 
     assert cache_ttl_seconds() == 1800
 
@@ -32,7 +32,7 @@ def test_daytime_cache_ttl_is_ten_minutes(monkeypatch):
     from datetime import datetime
 
     monkeypatch.setattr(
-        "backend.config.datetime",
+        "backend.core.config.datetime",
         type(
             "DT",
             (),
@@ -43,7 +43,7 @@ def test_daytime_cache_ttl_is_ten_minutes(monkeypatch):
             },
         ),
     )
-    from backend.config import cache_ttl_seconds
+    from backend.core.config import cache_ttl_seconds
 
     assert cache_ttl_seconds() == 600
 
@@ -52,7 +52,7 @@ def test_default_daily_budget_is_1300(monkeypatch):
     monkeypatch.delenv("AURORA_DAILY_BUDGET", raising=False)
     import importlib
 
-    import backend.config as config
+    import backend.core.config as config
 
     importlib.reload(config)
     assert config.AURORA_DAILY_BUDGET == 1300

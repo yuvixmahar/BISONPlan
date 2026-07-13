@@ -1,6 +1,6 @@
 import httpx
 
-from ..config import BASE_URL, aurora_cookies, aurora_headers
+from ..core.config import BASE_URL, aurora_cookies, aurora_headers
 from ..utils.aurora_data import json_list
 from ..utils.html_parser import parse_description_html
 from .aurora_budget import aurora_budget
