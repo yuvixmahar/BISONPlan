@@ -1,22 +1,35 @@
-def api_response(
-    success: bool,
-    source: str,
-    cached_at: int | None,
-    data,
-    budget_message: str | None = None,
-    cache_ttl_seconds: int | None = None,
-    total: int | None = None,
-) -> dict:
-    payload = {
-        "success": success,
-        "source": source,
-        "cached_at": cached_at,
-        "data": data,
-    }
-    if budget_message:
-        payload["budget_message"] = budget_message
-    if cache_ttl_seconds is not None:
-        payload["cache_ttl_seconds"] = cache_ttl_seconds
-    if total is not None:
-        payload["total"] = total
-    return payload
+from typing import Any
+
+from pydantic import BaseModel
+
+
+class ApiResponse(BaseModel):
+    """Envelope for every API response.
+
+    Optional fields serialize as ``null`` when unset; the frontend reads them
+    with ``??`` so absent-vs-null makes no difference to consumers.
+    """
+
+    success: bool
+    source: str
+    cached_at: int | None
+    data: Any
+    budget_message: str | None = None
+    cache_ttl_seconds: int | None = None
+    total: int | None = None
+
+    @classmethod
+    def from_result(cls, result: dict[str, Any], data: Any, **extra: Any) -> "ApiResponse":
+        """Build a success envelope from a ``cached_aurora_fetch`` result.
+
+        ``data`` is passed explicitly because callers often reshape it (e.g.
+        wrap it in a paginated page) before returning.
+        """
+        return cls(
+            success=True,
+            source=result["source"],
+            cached_at=result["cached_at"],
+            data=data,
+            budget_message=result["budget_message"],
+            **extra,
+        )

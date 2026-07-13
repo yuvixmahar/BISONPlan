@@ -10,7 +10,7 @@ from ..services.aurora import (
 from ..services.cached_aurora import cached_aurora_fetch
 from ..services.description import build_course_detail
 from ..services.scraper import scrape_subject_cached, scrape_subject_page_cached
-from ..utils.api_response import api_response
+from ..utils.api_response import ApiResponse
 from ..utils.errors import aurora_error_handling
 from ..utils.validation import CRN_PATTERN, SUBJECT_CODE_PATTERN, TERM_CODE_PATTERN
 
@@ -26,7 +26,7 @@ async def get_courses(
     includeDescriptions: bool = Query(False, alias="includeDescriptions"),
     offset: int = Query(0, ge=0),
     limit: int | None = Query(None, ge=1, le=500),
-):
+) -> ApiResponse:
     with aurora_error_handling("scraping"):
         # Paginated basic fetch: one page at a time so the course-search page can
         # paint the first courses fast, then load the rest in the background.
@@ -37,12 +37,9 @@ async def get_courses(
                 offset=offset,
                 max_size=limit,
             )
-            return api_response(
-                True,
-                page["source"],
-                page["cached_at"],
-                page["data"],
-                budget_message=page["budget_message"],
+            return ApiResponse.from_result(
+                page,
+                data=page["data"],
                 cache_ttl_seconds=cache_ttl_seconds(),
                 total=page["total"],
             )
@@ -52,12 +49,9 @@ async def get_courses(
             term=term,
             include_descriptions=includeDescriptions,
         )
-        return api_response(
-            True,
-            result["source"],
-            result["cached_at"],
-            result["data"],
-            budget_message=result["budget_message"],
+        return ApiResponse.from_result(
+            result,
+            data=result["data"],
             cache_ttl_seconds=cache_ttl_seconds(),
         )
 
@@ -68,7 +62,7 @@ async def get_course_description(
     request: Request,
     crn: str = Path(..., min_length=1, max_length=6, pattern=CRN_PATTERN),
     term: str = Query(..., min_length=6, max_length=6, pattern=TERM_CODE_PATTERN),
-):
+) -> ApiResponse:
     cache_key = f"description:{term}:{crn}"
 
     async def fetcher():
@@ -79,10 +73,4 @@ async def get_course_description(
 
     with aurora_error_handling("fetching description"):
         result = await cached_aurora_fetch(cache_key, fetcher)
-        return api_response(
-            True,
-            result["source"],
-            result["cached_at"],
-            result["data"],
-            budget_message=result["budget_message"],
-        )
+        return ApiResponse.from_result(result, data=result["data"])

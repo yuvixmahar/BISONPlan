@@ -3,7 +3,7 @@ from fastapi import APIRouter, Query, Request
 from ..limiter import limiter
 from ..services.aurora import fetch_subjects, init_term_session, make_client
 from ..services.cached_aurora import cached_aurora_fetch
-from ..utils.api_response import api_response
+from ..utils.api_response import ApiResponse
 from ..utils.aurora_data import normalize_subject_items
 from ..utils.errors import aurora_error_handling
 from ..utils.pagination import paginated_page
@@ -21,7 +21,7 @@ async def get_subjects(
     offset: int = Query(1, ge=1),
     max: int = Query(10, ge=1, le=50),
     uniqueSessionId: str | None = Query(None, alias="uniqueSessionId", max_length=SESSION_ID_MAX_LENGTH),
-):
+) -> ApiResponse:
     session_key = uniqueSessionId or ""
     cache_key = f"subjects:{term}:{searchTerm}:{offset}:{max}:{session_key}"
 
@@ -43,10 +43,4 @@ async def get_subjects(
             **paginated_page(normalize_subject_items(result["data"]), offset, max),
             "searchTerm": searchTerm,
         }
-        return api_response(
-            True,
-            result["source"],
-            result["cached_at"],
-            data,
-            budget_message=result["budget_message"],
-        )
+        return ApiResponse.from_result(result, data=data)
