@@ -22,7 +22,9 @@ async def cached_aurora_fetch(
       }
 
     On upstream failure, falls back to the last cached value ("stale") when one
-    exists; otherwise the error propagates.
+    exists; otherwise the error propagates. This fallback is intentionally
+    unbounded by age: if Aurora is down, serving old cached data to students is
+    the whole point of BISONplan, so we never expire the fallback copy.
     """
 
     stale_entry = cache.get(cache_key)

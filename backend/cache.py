@@ -1,7 +1,7 @@
 import time
 from typing import Any
 
-from .config import STALE_TTL_SECONDS, cache_ttl_seconds
+from .config import cache_ttl_seconds
 
 
 class TTLCache:
@@ -38,15 +38,6 @@ class TTLCache:
             return False
         ts, _, _ = entry
         return time.time() - ts < self._effective_ttl(key)
-
-    def is_stale(self, key: str) -> bool:
-        entry = self._data.get(key)
-        if not entry:
-            return False
-        ts, _, _ = entry
-        age = time.time() - ts
-        effective = self._effective_ttl(key)
-        return effective <= age < STALE_TTL_SECONDS
 
 
 # Module-level cache instance used by services

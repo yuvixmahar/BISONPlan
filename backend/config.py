@@ -19,7 +19,6 @@ AURORA_QUIET_CACHE_TTL_SECONDS = int(os.getenv("AURORA_QUIET_CACHE_TTL_SECONDS",
 
 REGISTRATION_MODE = os.getenv("REGISTRATION_MODE", "normal").lower()
 _CACHE_TTL_BY_MODE = {"peak": 300, "normal": 600, "quiet": 3600}
-STALE_TTL_SECONDS = int(os.getenv("STALE_TTL_SECONDS", "3600"))
 
 
 def is_quiet_hours() -> bool:
