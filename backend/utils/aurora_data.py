@@ -11,7 +11,7 @@ def json_list(payload) -> list:
 
 def normalize_subject_items(page: list) -> list[dict[str, str]]:
     normalized: list[dict[str, str]] = []
-    for item in page:
+    for item in page or []:
         if not isinstance(item, dict):
             continue
         code = item.get("code")
