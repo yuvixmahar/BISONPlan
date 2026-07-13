@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from ..config import (
     AURORA_DAILY_BUDGET,
@@ -13,7 +13,7 @@ class AuroraBudget:
 
     def __init__(self) -> None:
         self._count = 0
-        self._day: datetime.date | None = None
+        self._day: date | None = None
 
     def _reset_if_new_day(self) -> None:
         today = datetime.now(AURORA_TIMEZONE).date()

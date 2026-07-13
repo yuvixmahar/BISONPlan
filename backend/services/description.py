@@ -38,4 +38,6 @@ def empty_course_detail() -> dict:
 
 
 def merge_course_with_description(course: dict, parsed_desc: dict) -> dict:
-    return decode_aurora_strings({**course, **build_course_detail(parsed_desc)})
+    # Both inputs are already decoded (course upstream in the scraper,
+    # build_course_detail internally), so no further decoding is needed here.
+    return {**course, **build_course_detail(parsed_desc)}
