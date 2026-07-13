@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Query, Request
 
-from ..core.limiter import limiter
-from ..services.aurora import fetch_subjects, init_term_session, make_client
-from ..services.cached_aurora import cached_aurora_fetch
-from ..utils.api_response import ApiResponse
-from ..utils.aurora_data import normalize_subject_items
-from ..utils.errors import aurora_error_handling
-from ..utils.pagination import paginated_page
-from ..utils.validation import SESSION_ID_MAX_LENGTH, TERM_CODE_PATTERN
+from backend.core.limiter import limiter
+from backend.services.aurora import fetch_subjects, init_term_session, make_client
+from backend.services.cached_aurora import cached_aurora_fetch
+from backend.utils.api_response import ApiResponse
+from backend.utils.aurora_data import normalize_subject_items
+from backend.utils.errors import aurora_error_handling
+from backend.utils.pagination import paginated_page
+from backend.utils.validation import SESSION_ID_MAX_LENGTH, TERM_CODE_PATTERN
 
 router = APIRouter()
 

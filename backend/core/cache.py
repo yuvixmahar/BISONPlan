@@ -1,7 +1,7 @@
 import time
 from typing import Any
 
-from .config import cache_ttl_seconds
+from backend.core.config import cache_ttl_seconds
 
 
 class TTLCache:

@@ -2,8 +2,8 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from ..core.cache import cache
-from ..utils.errors import AURORA_ERRORS
+from backend.core.cache import cache
+from backend.utils.errors import AURORA_ERRORS
 
 
 async def cached_aurora_fetch(

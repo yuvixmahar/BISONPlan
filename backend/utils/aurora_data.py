@@ -1,4 +1,4 @@
-from .text import decode_html_entities
+from backend.utils.text import decode_html_entities
 
 
 def json_list(payload) -> list:

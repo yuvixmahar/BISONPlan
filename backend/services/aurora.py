@@ -1,9 +1,9 @@
 import httpx
 
-from ..core.config import BASE_URL, aurora_cookies, aurora_headers
-from ..utils.aurora_data import json_list
-from ..utils.html_parser import parse_description_html
-from .aurora_budget import aurora_budget
+from backend.core.config import BASE_URL, aurora_cookies, aurora_headers
+from backend.services.aurora_budget import aurora_budget
+from backend.utils.aurora_data import json_list
+from backend.utils.html_parser import parse_description_html
 
 
 def make_client(timeout: float = 30) -> httpx.AsyncClient:

@@ -1,5 +1,5 @@
-from ..services.prereq_parser import parse_prereq
-from ..utils.text import decode_aurora_strings
+from backend.services.prereq_parser import parse_prereq
+from backend.utils.text import decode_aurora_strings
 
 
 def build_combined_prereq_raw(

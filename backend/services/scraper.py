@@ -1,15 +1,15 @@
 import asyncio
 
-from ..services.aurora import (
+from backend.services.aurora import (
     fetch_courses,
     fetch_courses_page,
     fetch_description,
     init_term_session,
     make_client,
 )
-from ..services.cached_aurora import cached_aurora_fetch
-from ..services.description import empty_course_detail, merge_course_with_description
-from ..utils.text import decode_aurora_strings
+from backend.services.cached_aurora import cached_aurora_fetch
+from backend.services.description import empty_course_detail, merge_course_with_description
+from backend.utils.text import decode_aurora_strings
 
 
 async def scrape_subject(

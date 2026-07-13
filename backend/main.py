@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from .core.config import cors_origins
-from .core.limiter import limiter
-from .routers import courses, health, subjects, terms
+from backend.core.config import cors_origins
+from backend.core.limiter import limiter
+from backend.routers import courses, health, subjects, terms
 
 app = FastAPI(title="BISONplan API", version="0.1.0")
 app.state.limiter = limiter

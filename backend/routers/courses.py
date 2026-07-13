@@ -1,18 +1,18 @@
 from fastapi import APIRouter, Path, Query, Request
 
-from ..core.config import cache_ttl_seconds
-from ..core.limiter import limiter
-from ..services.aurora import (
+from backend.core.config import cache_ttl_seconds
+from backend.core.limiter import limiter
+from backend.services.aurora import (
     fetch_description,
     init_term_session,
     make_client,
 )
-from ..services.cached_aurora import cached_aurora_fetch
-from ..services.description import build_course_detail
-from ..services.scraper import scrape_subject_cached, scrape_subject_page_cached
-from ..utils.api_response import ApiResponse
-from ..utils.errors import aurora_error_handling
-from ..utils.validation import CRN_PATTERN, SUBJECT_CODE_PATTERN, TERM_CODE_PATTERN
+from backend.services.cached_aurora import cached_aurora_fetch
+from backend.services.description import build_course_detail
+from backend.services.scraper import scrape_subject_cached, scrape_subject_page_cached
+from backend.utils.api_response import ApiResponse
+from backend.utils.errors import aurora_error_handling
+from backend.utils.validation import CRN_PATTERN, SUBJECT_CODE_PATTERN, TERM_CODE_PATTERN
 
 router = APIRouter()
 

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from ..core.config import (
+from backend.core.config import (
     AURORA_DAILY_BUDGET,
     AURORA_TIMEZONE,
     cache_ttl_seconds,
