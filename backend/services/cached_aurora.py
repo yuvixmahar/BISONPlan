@@ -3,7 +3,6 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from ..cache import cache
-from ..services.aurora import AuroraBudgetBlocked
 from ..utils.errors import AURORA_ERRORS
 
 
@@ -16,12 +15,14 @@ async def cached_aurora_fetch(
 
     Returns:
       {
-        "source": "live" | "stale" | "cached_only",
+        "source": "live" | "stale",
         "cached_at": int | None,
         "data": Any,
-        "budget_blocked": bool,
         "budget_message": str | None,
       }
+
+    On upstream failure, falls back to the last cached value ("stale") when one
+    exists; otherwise the error propagates.
     """
 
     stale_entry = cache.get(cache_key)
@@ -32,7 +33,6 @@ async def cached_aurora_fetch(
             "source": "live",
             "cached_at": int(cached_at),
             "data": data,
-            "budget_blocked": False,
             "budget_message": None,
         }
 
@@ -43,20 +43,8 @@ async def cached_aurora_fetch(
             "source": "live",
             "cached_at": int(time.time()),
             "data": fresh_data,
-            "budget_blocked": False,
             "budget_message": None,
         }
-    except AuroraBudgetBlocked as exc:
-        if stale_entry:
-            cached_at, stale_data = stale_entry
-            return {
-                "source": "cached_only",
-                "cached_at": int(cached_at),
-                "data": stale_data,
-                "budget_blocked": True,
-                "budget_message": exc.message,
-            }
-        raise
     except AURORA_ERRORS:
         if stale_entry:
             cached_at, stale_data = stale_entry
@@ -64,7 +52,6 @@ async def cached_aurora_fetch(
                 "source": "stale",
                 "cached_at": int(cached_at),
                 "data": stale_data,
-                "budget_blocked": False,
                 "budget_message": None,
             }
         raise

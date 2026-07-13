@@ -3,7 +3,7 @@ import httpx
 from ..config import BASE_URL, aurora_cookies, aurora_headers
 from ..utils.aurora_data import json_list
 from ..utils.html_parser import parse_description_html
-from .aurora_budget import AuroraBudgetBlocked, aurora_budget
+from .aurora_budget import aurora_budget
 
 
 def make_client(timeout: float = 30) -> httpx.AsyncClient:
@@ -15,7 +15,6 @@ def make_client(timeout: float = 30) -> httpx.AsyncClient:
 
 
 async def _request(client: httpx.AsyncClient, method: str, url: str, **kwargs):
-    aurora_budget.assert_can_request()
     aurora_budget.record_request()
     request_fn = client.get if method == "GET" else client.post
     return await request_fn(url, **kwargs)
@@ -174,7 +173,6 @@ async def fetch_terms(
 
 
 __all__ = [
-    "AuroraBudgetBlocked",
     "make_client",
     "init_term_session",
     "fetch_courses",

@@ -8,13 +8,6 @@ from ..config import (
 )
 
 
-class AuroraBudgetBlocked(Exception):
-    def __init__(self, message: str, reason: str):
-        super().__init__(message)
-        self.message = message
-        self.reason = reason
-
-
 class AuroraBudget:
     """In-process daily Aurora HTTP budget."""
 
@@ -35,10 +28,6 @@ class AuroraBudget:
     def remaining(self) -> int:
         self._reset_if_new_day()
         return max(0, AURORA_DAILY_BUDGET - self._count)
-
-    def assert_can_request(self) -> None:
-        # Budget gate disabled — unlimited Aurora requests allowed in production.
-        pass
 
     def record_request(self) -> None:
         self._reset_if_new_day()
