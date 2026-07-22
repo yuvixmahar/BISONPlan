@@ -4,12 +4,11 @@ from zoneinfo import ZoneInfo
 
 BASE_URL = "https://aurora-registration.umanitoba.ca/StudentRegistrationSsb/ssb"
 
-CONTACT_EMAIL = os.getenv("BISONPLAN_CONTACT_EMAIL", "singhy5@myumanitoba.ca")
+CONTACT_EMAIL = os.getenv("BISONPLAN_CONTACT_EMAIL")
 AURORA_USER_AGENT = (
     f"BISONplan-StudentProject/0.1 (+https://github.com; contact: {CONTACT_EMAIL})"
 )
 
-AURORA_DAILY_BUDGET = int(os.getenv("AURORA_DAILY_BUDGET", "1300"))
 AURORA_TIMEZONE = ZoneInfo(os.getenv("AURORA_TIMEZONE", "America/Winnipeg"))
 
 # 12 AM – 6 AM CST: longer cache, Aurora calls still allowed

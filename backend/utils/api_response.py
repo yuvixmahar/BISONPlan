@@ -14,7 +14,6 @@ class ApiResponse(BaseModel):
     source: str
     cached_at: int | None
     data: Any
-    budget_message: str | None = None
     cache_ttl_seconds: int | None = None
     total: int | None = None
 
@@ -30,6 +29,5 @@ class ApiResponse(BaseModel):
             source=result["source"],
             cached_at=result["cached_at"],
             data=data,
-            budget_message=result["budget_message"],
             **extra,
         )

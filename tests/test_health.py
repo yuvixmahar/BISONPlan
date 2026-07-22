@@ -10,5 +10,5 @@ async def test_health_returns_up_status(client):
     assert body["success"] is True
     assert body["source"] == "live"
     assert body["data"]["api_status"] == "up"
-    assert "daily_budget" in body["data"]
+    assert "quiet_hours" in body["data"]
     assert "cache_ttl_seconds" in body["data"]

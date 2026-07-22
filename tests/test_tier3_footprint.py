@@ -5,7 +5,7 @@ from backend.main import app
 
 
 @pytest.mark.asyncio
-async def test_health_reports_budget_and_cache_ttl():
+async def test_health_reports_cache_ttl():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
         response = await client.get("/api/health")
@@ -14,7 +14,6 @@ async def test_health_reports_budget_and_cache_ttl():
     body = response.json()
     assert body["success"] is True
     assert body["data"]["api_status"] == "up"
-    assert body["data"]["daily_budget"] == 1300
     assert body["data"]["cache_ttl_seconds"] >= 300
 
 
@@ -39,10 +38,22 @@ async def test_invalid_subject_code_returns_422():
     assert response.status_code == 422
 
 
-@pytest.mark.asyncio
-async def test_aurora_user_agent_contains_contact_email():
-    from backend.core.config import aurora_headers
+def test_aurora_user_agent_identifies_project_and_contact(monkeypatch):
+    """Aurora requests must be attributable: project name plus a contact address.
 
-    headers = aurora_headers()
-    assert "singhy5@myumanitoba.ca" in headers["User-Agent"]
-    assert "BISONplan-StudentProject" in headers["User-Agent"]
+    The contact address comes from ``BISONPLAN_CONTACT_EMAIL`` and is read at
+    import time, so the module is reloaded around the patched environment.
+    """
+    import importlib
+
+    from backend.core import config
+
+    monkeypatch.setenv("BISONPLAN_CONTACT_EMAIL", "contact@example.com")
+    importlib.reload(config)
+    try:
+        user_agent = config.aurora_headers()["User-Agent"]
+        assert "BISONplan-StudentProject" in user_agent
+        assert "contact@example.com" in user_agent
+    finally:
+        monkeypatch.delenv("BISONPLAN_CONTACT_EMAIL", raising=False)
+        importlib.reload(config)

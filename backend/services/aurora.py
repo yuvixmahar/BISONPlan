@@ -1,7 +1,6 @@
 import httpx
 
 from backend.core.config import BASE_URL, aurora_cookies, aurora_headers
-from backend.services.aurora_budget import aurora_budget
 from backend.utils.aurora_data import json_list
 from backend.utils.html_parser import parse_description_html
 
@@ -15,7 +14,6 @@ def make_client(timeout: float = 30) -> httpx.AsyncClient:
 
 
 async def _request(client: httpx.AsyncClient, method: str, url: str, **kwargs):
-    aurora_budget.record_request()
     request_fn = client.get if method == "GET" else client.post
     return await request_fn(url, **kwargs)
 

@@ -9,15 +9,10 @@ def reset_runtime_state():
     # Reset shared in-memory state between tests so behaviour is controlled
     # entirely through Aurora mocks.
     from backend.core.cache import cache
-    from backend.services import aurora_budget as module
 
     cache._data.clear()
-    module.aurora_budget._count = 0
-    module.aurora_budget._day = None
     yield
     cache._data.clear()
-    module.aurora_budget._count = 0
-    module.aurora_budget._day = None
 
 
 @pytest.fixture

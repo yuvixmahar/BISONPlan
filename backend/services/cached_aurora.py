@@ -18,7 +18,6 @@ async def cached_aurora_fetch(
         "source": "live" | "stale",
         "cached_at": int | None,
         "data": Any,
-        "budget_message": str | None,
       }
 
     On upstream failure, falls back to the last cached value ("stale") when one
@@ -35,7 +34,6 @@ async def cached_aurora_fetch(
             "source": "live",
             "cached_at": int(cached_at),
             "data": data,
-            "budget_message": None,
         }
 
     try:
@@ -45,7 +43,6 @@ async def cached_aurora_fetch(
             "source": "live",
             "cached_at": int(time.time()),
             "data": fresh_data,
-            "budget_message": None,
         }
     except AURORA_ERRORS:
         if stale_entry:
@@ -54,6 +51,5 @@ async def cached_aurora_fetch(
                 "source": "stale",
                 "cached_at": int(cached_at),
                 "data": stale_data,
-                "budget_message": None,
             }
         raise

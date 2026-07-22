@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from backend.services.aurora_budget import aurora_budget
+from backend.core.config import cache_ttl_seconds, is_quiet_hours
 from backend.utils.api_response import ApiResponse
 
 router = APIRouter()
@@ -14,6 +14,7 @@ async def health() -> ApiResponse:
         cached_at=None,
         data={
             "api_status": "up",
-            **aurora_budget.snapshot(),
+            "quiet_hours": is_quiet_hours(),
+            "cache_ttl_seconds": cache_ttl_seconds(),
         },
     )

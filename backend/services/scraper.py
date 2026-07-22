@@ -76,7 +76,6 @@ async def scrape_subject_page_cached(
         "cached_at": result["cached_at"],
         "data": payload["items"],
         "total": payload["total"],
-        "budget_message": result["budget_message"],
     }
 
 
